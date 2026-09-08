@@ -1,0 +1,128 @@
+= Spring JMS API Compatibility
+include::./includes/attributes.adoc[]
+
+The `quarkus-spring-jms` module lets you use the Spring JMS API (`@JmsListener`, `@SendTo`, `@Header`, `JmsClient`, `JmsResponse`) in a Quarkus application.
+It re-exports the actual Spring types and maps them to the Quarkus JMS extension at build time, so existing Spring JMS code compiles with minimal changes.
+
+== Getting Started
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkiverse.jms</groupId>
+    <artifactId>quarkus-spring-jms</artifactId>
+</dependency>
+----
+
+This brings in the Spring JMS API types and the Quarkus JMS runtime. You still need a JMS provider (e.g., `quarkus-artemis-jms`).
+
+== Supported Spring Annotations
+
+[cols="30,30,40"]
+|===
+| Spring annotation | Package | Mapping
+
+| `@JmsListener` | `org.springframework.jms.annotation` | Mapped to `io.quarkiverse.jms.JmsListener` — destination, selector, concurrency, and subscription are all supported
+| `@JmsListeners` | `org.springframework.jms.annotation` | Repeatable container — each listener is mapped individually
+| `@SendTo` | `org.springframework.messaging.handler.annotation` | Mapped to `io.quarkiverse.jms.SendTo`
+| `@Header` | `org.springframework.messaging.handler.annotation` | Mapped to `io.quarkiverse.jms.JmsHeader`
+| `@Payload` | `org.springframework.messaging.handler.annotation` | Mapped to the first non-annotated parameter (implicit in Quarkus)
+|===
+
+== Supported Spring Types
+
+[cols="40,60"]
+|===
+| Spring type | Quarkus equivalent
+
+| `org.springframework.jms.core.JmsClient` | Adapted via `SpringJmsClientAdapter` — inject with `@Inject`
+| `org.springframework.jms.listener.adapter.JmsResponse` | Supported as a return type from `@JmsListener` methods for dynamic reply routing
+|===
+
+== Example
+
+A typical Spring JMS listener works as-is:
+
+[source,java]
+----
+import org.springframework.jms.annotation.JmsListener;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.SendTo;
+
+import jakarta.enterprise.context.ApplicationScoped;
+
+@ApplicationScoped
+public class OrderProcessor {
+
+    @JmsListener(destination = "orders", concurrency = "3-5")
+    @SendTo("order-events")
+    public OrderEvent process(Order order, @Header("category") String category) {
+        return new OrderEvent(order.id(), category, "processed");
+    }
+}
+----
+
+The deployment processor extracts the destination, concurrency range, selector, and container factory from the Spring annotations and produces the same build items as native `@JmsListener`.
+
+== Container Factories
+
+Spring's `containerFactory` attribute maps to named configuration groups.
+Configure concurrency, pub/sub domain, and acknowledge mode per factory:
+
+[source,properties]
+----
+quarkus.spring.jms.container-factories.myFactory.concurrency=3-10
+quarkus.spring.jms.container-factories.myFactory.pub-sub-domain=true
+quarkus.spring.jms.container-factories.myFactory.acknowledge-mode=client
+----
+
+[source,java]
+----
+@JmsListener(destination = "events", containerFactory = "myFactory")
+public void onEvent(Event event) { }
+----
+
+== Pub/Sub Domain
+
+By default, destinations are treated as queues.
+Set `pub-sub-domain` to treat destinations as topics globally:
+
+[source,properties]
+----
+quarkus.spring.jms.pub-sub-domain=true
+----
+
+Or per container factory as shown above.
+
+== JmsClient
+
+Inject `org.springframework.jms.core.JmsClient` to send and receive messages using the Spring API:
+
+[source,java]
+----
+import org.springframework.jms.core.JmsClient;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+@ApplicationScoped
+public class NotificationService {
+
+    @Inject
+    JmsClient jmsClient;
+
+    public void sendNotification(Notification notification) {
+        jmsClient.destination("notifications").send(notification);
+    }
+}
+----
+
+The `SpringJmsClientAdapter` delegates to the Quarkus `JmsClient` under the hood, with full session pooling and observability support.
+
+== What's Different from Spring
+
+* CDI scope is required — annotate listener classes with `@ApplicationScoped` (or another CDI scope). The extension adds it automatically if missing, but being explicit is recommended.
+* `@Headers` (map injection of all headers) is supported.
+* `@Payload` is optional — the first non-annotated parameter is the payload by default.
+* Container factory configuration uses `application.properties` instead of Java `@Bean` definitions.
+* All Quarkus JMS features (session pooling, health checks, tracing, metrics, XA transactions) apply transparently to Spring-annotated listeners.

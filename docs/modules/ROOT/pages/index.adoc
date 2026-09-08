@@ -1,0 +1,113 @@
+= Quarkus JMS Extension
+include::./includes/attributes.adoc[]
+:categories: messaging
+:summary: Send and receive JMS messages using a fluent API, annotation-driven listeners, or Reactive Messaging channels with full transaction support.
+:extension-status: preview
+:topics: messaging,jms,artemis,transactions,xa
+:extensions: io.quarkiverse.jms:quarkus-jms
+
+The Quarkus JMS extension provides three complementary APIs for working with JMS:
+
+* **`JmsQueue<T>` / `JmsTopic<T>`** — injectable, typed destinations for sending and receiving messages
+* **`@JmsListener`** — annotation-driven message consumption
+* **Reactive Messaging connector** (`smallrye-jms`) — `@Incoming` / `@Outgoing` channel-based messaging
+
+All three support local and XA distributed transactions, connection pooling, and DevServices.
+
+[cols="20,40,40"]
+|===
+| API | Use when | Example
+
+| xref:quarkus-jms.adoc[`JmsQueue<T>` / `JmsTopic<T>`] | Imperative send/receive in REST endpoints, services | Request-reply, browse, one-off sends
+| xref:quarkus-jms.adoc#_consuming_messages_with_jmslistener[`@JmsListener`] | Continuous message consumption | Order processing, event handling
+| xref:reactive-messaging.adoc[RM connector] (`@Incoming`/`@Outgoing`) | Reactive pipelines, stream processing | Channel-based messaging with backpressure
+|===
+
+== Getting Started
+
+Add the extension to your project:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkiverse.jms</groupId>
+    <artifactId>quarkus-jms</artifactId>
+</dependency>
+----
+
+You also need a JMS provider.
+For example, the https://quarkiverse.github.io/quarkiverse-docs/quarkus-artemis-jms/dev/index.html[Quarkus Artemis JMS extension] provides support for Apache Artemis:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkiverse.artemis</groupId>
+    <artifactId>quarkus-artemis-jms</artifactId>
+</dependency>
+----
+
+=== Quick Example
+
+The following example shows a REST endpoint that sends orders to a JMS queue
+and a listener that processes them asynchronously.
+
+[source,java]
+----
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+
+import io.quarkiverse.jms.JmsQueue;
+import io.smallrye.common.annotation.Identifier;
+
+@Path("/orders")
+@ApplicationScoped
+public class OrderResource {
+
+    @Inject
+    @Identifier("orders")
+    JmsQueue<Order> orders;
+
+    @POST
+    public void placeOrder(Order order) {
+        orders.message(order)
+            .property("category", order.category())
+            .send();
+    }
+}
+----
+
+[source,java]
+----
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
+import io.quarkiverse.jms.JmsHeader;
+import io.quarkiverse.jms.JmsListener;
+import io.quarkus.logging.Log;
+
+@ApplicationScoped
+public class OrderProcessor {
+
+    @Inject
+    EntityManager em;
+
+    @JmsListener(value = "orders", concurrency = 2)
+    public void process(Order order, @JmsHeader("category") String category) {
+        em.persist(order);
+        Log.infof("Processed %s order %s", category, order.id());
+    }
+}
+----
+
+No connection or session management is needed — the extension handles session pooling, serialization, and lifecycle automatically.
+With `quarkus-artemis-jms` on the classpath, a broker is started via Dev Services and a `ConnectionFactory` is already configured out of the box.
+
+== What's Next
+
+* xref:quarkus-jms.adoc[Quarkus JMS] — fluent API, listeners, configuration, observability, migration
+* xref:reactive-messaging.adoc[Reactive Messaging JMS Connector] — `@Incoming` / `@Outgoing` channel-based messaging
+* xref:transactions.adoc[XA Distributed Transactions] — atomic JMS + database operations
+* xref:spring-jms.adoc[Spring JMS Compatibility] — use Spring JMS annotations and types in Quarkus

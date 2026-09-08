@@ -1,0 +1,17 @@
+---
+artifact: ${project.groupId}:${project.artifactId}:${project.version}
+name: "JMS"
+metadata:
+  keywords:
+  - "jms"
+  - "messaging"
+  guide: "https://quarkus.io/guides/jms"
+  categories:
+  - "messaging"
+  status: "preview"
+  config:
+  - "quarkus.jms."
+  capabilities:
+    provides:
+    - "io.quarkiverse.jms"
+description: "Send and receive JMS messages with a simple API"

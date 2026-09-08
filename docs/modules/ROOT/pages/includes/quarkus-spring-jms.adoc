@@ -1,0 +1,95 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a|icon:lock[title=Fixed at build time] [[quarkus-spring-jms_quarkus-spring-jms-pub-sub-domain]] [.property-path]##link:#quarkus-spring-jms_quarkus-spring-jms-pub-sub-domain[`+++quarkus.spring.jms.pub-sub-domain+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.spring.jms.pub-sub-domain+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether destinations are topics (pub/sub) by default. When `true`, all Spring `@JmsListener` destinations and `JmsClient.destination()` calls use topics instead of queues.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SPRING_JMS_PUB_SUB_DOMAIN+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SPRING_JMS_PUB_SUB_DOMAIN+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-spring-jms_quarkus-spring-jms-container-factories-container-factories-pub-sub-domain]] [.property-path]##link:#quarkus-spring-jms_quarkus-spring-jms-container-factories-container-factories-pub-sub-domain[`+++quarkus.spring.jms.container-factories."container-factories".pub-sub-domain+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.spring.jms.container-factories."container-factories".pub-sub-domain+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether this factory uses topics (pub/sub) instead of queues.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SPRING_JMS_CONTAINER_FACTORIES__CONTAINER_FACTORIES__PUB_SUB_DOMAIN+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SPRING_JMS_CONTAINER_FACTORIES__CONTAINER_FACTORIES__PUB_SUB_DOMAIN+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-spring-jms_quarkus-spring-jms-container-factories-container-factories-concurrency]] [.property-path]##link:#quarkus-spring-jms_quarkus-spring-jms-container-factories-container-factories-concurrency[`+++quarkus.spring.jms.container-factories."container-factories".concurrency+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.spring.jms.container-factories."container-factories".concurrency+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Concurrency for listeners using this factory. Supports Spring's range format (e.g., "3-10").
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SPRING_JMS_CONTAINER_FACTORIES__CONTAINER_FACTORIES__CONCURRENCY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SPRING_JMS_CONTAINER_FACTORIES__CONTAINER_FACTORIES__CONCURRENCY+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-spring-jms_quarkus-spring-jms-container-factories-container-factories-acknowledge-mode]] [.property-path]##link:#quarkus-spring-jms_quarkus-spring-jms-container-factories-container-factories-acknowledge-mode[`+++quarkus.spring.jms.container-factories."container-factories".acknowledge-mode+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.spring.jms.container-factories."container-factories".acknowledge-mode+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Acknowledge mode for listeners using this factory.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_SPRING_JMS_CONTAINER_FACTORIES__CONTAINER_FACTORIES__ACKNOWLEDGE_MODE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_SPRING_JMS_CONTAINER_FACTORIES__CONTAINER_FACTORIES__ACKNOWLEDGE_MODE+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+|===
+

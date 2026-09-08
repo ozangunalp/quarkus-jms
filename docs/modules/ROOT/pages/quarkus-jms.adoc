@@ -1,0 +1,903 @@
+= Quarkus JMS
+include::./includes/attributes.adoc[]
+
+The `quarkus-jms` extension provides a fluent API for sending and receiving JMS messages, annotation-driven message listeners, and built-in session pooling, observability, and transaction support.
+
+== Sending and Receiving Messages
+
+The main entry point for imperative JMS operations is `JmsQueue<T>` (for point-to-point) and `JmsTopic<T>` (for publish-subscribe).
+
+Inject a typed destination by qualifying it with `@Identifier`:
+
+[source,java]
+----
+import java.util.Optional;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+
+import io.quarkiverse.jms.JmsQueue;
+import io.smallrye.common.annotation.Identifier;
+
+@Path("/orders")
+@ApplicationScoped
+public class OrderResource {
+
+    @Inject
+    @Identifier("orders")
+    JmsQueue<Order> orders;
+
+    @POST
+    public void placeOrder(Order order) {
+        orders.send(order);
+    }
+
+    @GET
+    @Path("/next")
+    public Order next() {
+        Optional<Order> order = orders.receive();
+        return order.orElse(null);
+    }
+}
+----
+
+Injected endpoints are type-safe: the generic parameter (`Order` above) determines the payload type for both sending and receiving, and <<Message Conversion,message conversion>> is handled transparently.
+
+All operations on `JmsQueue` and `JmsTopic` are **blocking**.
+Under the hood, each call acquires a <<Session Pooling,pooled session>>, performs the JMS operation, and releases the session back to the pool.
+This makes them safe to use from REST endpoints, `@Scheduled` methods, and `@Transactional` services, but they should not be called from a Vert.x event-loop thread.
+
+=== Configuring Destinations
+
+By default, the extension uses the `@Default` CDI `ConnectionFactory` bean.
+The `quarkus-artemis-jms` extension provides this bean automatically from configuration.
+For other brokers, produce a ConnectionFactory CDI bean in your application.
+To target a specific factory, set the `connection-factory` property to the name of a `ConnectionFactory` bean qualified with `@Identifier`.
+
+Each destination can have its own defaults in `application.properties`, keyed by its `@Identifier` name.
+These apply to every operation on that destination, so you don't need to repeat them on each call:
+
+[source,properties]
+----
+quarkus.jms.destinations.orders.connection-factory=myFactory
+quarkus.jms.destinations.orders.selector=category = 'premium'
+quarkus.jms.destinations.orders.priority=5
+quarkus.jms.destinations.orders.ttl=PT60S
+quarkus.jms.destinations.orders.delivery-delay=PT5M
+quarkus.jms.destinations.orders.delivery-mode=persistent
+----
+
+By default, the `@Identifier` value is used as the JMS destination name on the broker.
+Use the `destination` property to decouple the identifier from the broker destination name:
+
+[source,properties]
+----
+quarkus.jms.destinations.orders.destination=DEV.QUEUE.3
+----
+
+[source,java]
+----
+@Inject @Identifier("orders") JmsQueue<Order> orders;  // sends to DEV.QUEUE.3
+----
+
+Global defaults apply to all destinations that don't override them:
+
+[source,properties]
+----
+quarkus.jms.client.delivery-mode=persistent
+quarkus.jms.client.priority=4
+quarkus.jms.client.time-to-live=PT10M
+quarkus.jms.client.delivery-delay=PT0S
+----
+
+The configuration precedence order is:
+
+- per-call builder config
+- per-destination config
+- global client defaults.
+
+=== Customizing Sends
+
+When you need to set JMS headers or properties on the outgoing message, wrap the payload in a `SendMessage` with a modifier callback:
+
+[source,java]
+----
+void sendWithCustomHeaders(Order order) {
+    orders.send(SendMessage.of(order, msg -> msg.setStringProperty("custom", "value")));
+}
+----
+
+For full control over message creation, pass a factory function that receives the `JMSContext` and returns a raw JMS `Message`:
+
+[source,java]
+----
+void sendRawMessage(String content) {
+    orders.send(ctx -> {
+        TextMessage msg = ctx.createTextMessage(content);
+        msg.setStringProperty("format", "legacy");
+        return msg;
+    });
+}
+----
+
+To configure producer settings on a per-call basis, start a builder chain with `message(payload)`.
+The builder exposes two categories of options:
+
+* **Producer config** — `priority()`, `timeToLive()`, `deliveryMode()`, `deliveryDelay()` control how the message is delivered.
+* **Message config** — `property()`, `correlationId()`, `replyTo()` set JMS message headers and properties.
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderService {
+
+    @Inject
+    @Identifier("orders")
+    JmsQueue<Order> orders;
+
+    void sendOrder(Order order) {
+        orders.message(order)
+            .priority(5)
+            .timeToLive(Duration.ofMinutes(30))
+            .deliveryDelay(Duration.ofSeconds(10))
+            .property("category", "premium")
+            .send();
+    }
+}
+----
+
+The `correlationId()` method accepts either a fixed string or a function that receives the JMS `Message` and returns a correlation ID — useful when the ID depends on the message itself (e.g., `JMSMessageID`).
+
+The `replyTo()` method accepts either a queue name string or a `Function<JMSContext, Destination>` factory for full control over the reply destination.
+
+The builder also accepts a `SendMessage` to combine producer config with message-level modifiers:
+
+[source,java]
+----
+void sendPriorityWithHeaders(Order order) {
+    orders.message(SendMessage.of(order, msg -> msg.setStringProperty("custom", "value")))
+        .priority(5)
+        .send();
+}
+----
+
+=== Customizing Receives
+
+The `select()` and `receiveTimeout()` methods start a receive builder for per-call configuration.
+Selectors use the standard JMS selector syntax to filter messages on the broker side, avoiding unnecessary network transfer:
+
+[source,java]
+----
+Optional<Order> receivePriorityOrder() {
+    return orders
+        .select("priority > 3")
+        .receiveTimeout(Duration.ofSeconds(5))
+        .receive();
+}
+----
+
+If you need access to JMS headers alongside the deserialized payload, use `receiveMessage()` which returns a `ReceiveMessage<T>` wrapping both:
+
+[source,java]
+----
+void receiveAndLog() {
+    Optional<ReceiveMessage<Order>> msg = orders.receiveMessage();
+    msg.ifPresent(m -> {
+        Order payload = m.payload();
+        String corrId = m.message().getJMSCorrelationID();
+        Log.infof("Received order %s with correlationId %s", payload.id(), corrId);
+    });
+}
+----
+
+Both `receive()` and `receiveMessage()` also accept a `Class<U>` parameter to deserialize as a different type than the destination's generic parameter.
+
+==== Receiving Multiple Messages
+
+By default, <<Consumer Caching, JMS consumers are not cached>> and each `receive()` operation creates a consumer, receives one message, and closes the consumer.
+To keep a single consumer open for multiple receives, use `receiveWith`:
+
+[source,java]
+----
+orders.receiveWith(receiver -> {
+    receiver.receive().ifPresent(this::process);
+    receiver.receive().ifPresent(this::process);
+});
+----
+
+The consumer is created before the callback and closed after it returns.
+You can combine it with selectors and timeouts:
+
+[source,java]
+----
+orders.select("priority > 3")
+    .receiveTimeout(Duration.ofSeconds(30))
+    .receiveWith(receiver -> {
+        receiver.receive().ifPresent(this::processHighPriority);
+    });
+----
+
+The `JmsReceiver` also accepts an explicit `Duration` timeout per call:
+
+[source,java]
+----
+orders.receiveWith(receiver -> {
+    receiver.receive(Duration.ofSeconds(1)).ifPresent(this::process);
+    receiver.receiveMessage(Duration.ofSeconds(1)).ifPresent(this::processRaw);
+});
+----
+
+=== Request-Reply Pattern
+
+`sendAndReceive()` sends a message and waits for a reply in a single call.
+By default, it creates a temporary queue for the reply, so no shared infrastructure is needed:
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderService {
+
+    @Inject
+    @Identifier("requests")
+    JmsQueue<Request> requests;
+
+    Reply submitRequest(Request request) {
+        return requests.sendAndReceive(request, Reply.class);
+    }
+}
+----
+
+You can combine request-reply with the send builder to set producer config or a custom receive timeout:
+
+[source,java]
+----
+Reply submitPriorityRequest(Request request) {
+    return requests.message(request)
+        .priority(5)
+        .receiveTimeout(Duration.ofSeconds(30))
+        .sendAndReceive(Reply.class);
+}
+----
+
+Use `sendAndReceiveMessage()` instead if you need the raw JMS `Message` alongside the deserialized reply.
+
+By default, a temporary queue is created for each reply.
+For high-throughput scenarios, use a shared reply queue instead — a correlation ID is auto-generated and reply filtering is handled automatically:
+
+[source,java]
+----
+Reply submitWithSharedReplyQueue(Request request) {
+    return requests.message(request)
+        .replyTo("shared-reply-queue")
+        .sendAndReceive(Reply.class);
+}
+----
+
+=== Browsing Queues
+
+Browsing reads messages from a queue without consuming them — useful for monitoring or UI dashboards.
+It is only available on `JmsQueue`, not `JmsTopic`:
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderMonitor {
+
+    @Inject
+    @Identifier("orders")
+    JmsQueue<Order> orders;
+
+    List<Order> listAll() {
+        return orders.browse();
+    }
+
+    List<Order> listVip() {
+        return orders.browse("priority > 3");
+    }
+
+    List<ReceiveMessage<Order>> listWithHeaders() {
+        return orders.browseMessages();
+    }
+}
+----
+
+=== Accessing the Raw JMSContext
+
+For operations not covered by the fluent API, `execute()` gives you a raw `JMSContext` scoped to a pooled session:
+
+[source,java]
+----
+@ApplicationScoped
+public class BrokerInfo {
+
+    @Inject
+    @Identifier("orders")
+    JmsQueue<Order> orders;
+
+    String getProviderName() {
+        return orders.execute(ctx -> ctx.getMetaData().getJMSProviderName());
+    }
+}
+----
+
+=== JmsClient API
+
+For dynamic destination names, late-bound payload types, or utility code that resolves destinations at runtime, inject `JmsClient` directly.
+It returns `JmsQueue<T>` and `JmsTopic<T>` instances with the same API described above:
+
+[source,java]
+----
+@ApplicationScoped
+public class MessageRouter {
+
+    @Inject
+    JmsClient jms;
+
+    void forwardOrder(Order order, String queueName) {
+        jms.queue(queueName).send(order);
+    }
+
+    Optional<Order> receiveOrder(String queueName) {
+        return jms.queue(queueName, Order.class).receive();
+    }
+
+    void publishEvent(Event event) {
+        jms.topic("events").send(event);
+    }
+}
+----
+
+== Consuming Messages with @JmsListener
+
+For continuous message consumption, annotate a CDI bean method with `@JmsListener`.
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderProcessor {
+
+    @JmsListener("orders")
+    public void process(Order order) {
+        // process the order
+    }
+}
+----
+
+The first non-annotated parameter is the message payload, deserialized automatically based on its type.
+
+The payload parameter can be any of the following types.
+The extension picks the appropriate JMS message type and conversion strategy at build time:
+
+* `String` — extracted from `TextMessage`
+* `byte[]` — extracted from `BytesMessage`
+* `jakarta.jms.Message` or subtypes (`TextMessage`, `BytesMessage`, etc.) — the raw JMS message, no conversion
+* Any POJO — deserialized from JSON via `JmsMessageConverter`
+
+[source,java]
+----
+@JmsListener("images")
+public void processImage(byte[] data) { }
+
+@JmsListener("raw")
+public void processRaw(jakarta.jms.Message message) {
+    if (message instanceof TextMessage textMsg) {
+        String body = textMsg.getText();
+    }
+}
+----
+
+You can inject JMS message properties to additional parameters using `@JmsHeader` annotation.
+The extension converts the property value to the parameter type automatically.
+Supported types: `String`, `int`, `long`, `boolean`, `double`, `float`, `short`, `byte`.
+
+[source,java]
+----
+@JmsListener("orders")
+public void process(Order order,
+        @JmsHeader("priority") int priority,
+        @JmsHeader("category") String category) {
+}
+----
+
+=== Reply Routing with @SendTo
+
+If the listener method returns a value, the extension sends it to the destination specified by `@SendTo`.
+If `@SendTo` is omitted, the reply is sent to `message.getJMSReplyTo()` when set.
+
+`@SendTo` supports both queues and topics via its `topic` attribute:
+
+[source,java]
+----
+@JmsListener("requests")
+@SendTo("responses")
+public Response handle(Request request) {
+    return new Response(request.id(), "processed");
+}
+
+@JmsListener("orders")
+@SendTo(value = "order-events", topic = true)
+public OrderEvent onOrder(Order order) {
+    return new OrderEvent(order.id(), "completed");
+}
+----
+
+When the reply destination must be determined at runtime, return a `JmsResponse<T>` instead of using `@SendTo`:
+
+[source,java]
+----
+@JmsListener("orders")
+JmsResponse<OrderEvent> processOrder(Order order) {
+    OrderEvent event = process(order);
+    if (order.isVip()) {
+        return JmsResponse.forQueue(event, "vip-events");
+    }
+    return JmsResponse.forQueue(event, "standard-events");
+}
+----
+
+Use `JmsResponse.forTopic()` to send to a topic instead of a queue.
+
+=== Topics and Durable Subscriptions
+
+Set `topic = true` to listen on a topic instead of a queue. For durable subscriptions that survive consumer restarts, provide a `subscription` name:
+
+[source,java]
+----
+@JmsListener(value = "events", topic = true)
+public void onEvent(Event event) { }
+
+@JmsListener(value = "events", topic = true,
+    subscription = "my-durable-sub")
+public void onDurableEvent(Event event) { }
+----
+
+=== Named Connection Factories
+
+When multiple JMS brokers are configured, use `connectionFactory` to target a specific one.
+The value matches a `ConnectionFactory` CDI bean qualified with `@Identifier`:
+
+[source,java]
+----
+@JmsListener(value = "orders", connectionFactory = "broker-b")
+public void process(Order order) { }
+----
+
+For `JmsQueue`/`JmsTopic` injection, configure `quarkus.jms.destinations.<name>.connection-factory` instead.
+
+=== Selectors
+
+JMS selectors filter messages on the broker side, so the listener only receives matching messages:
+
+[source,java]
+----
+@JmsListener(value = "orders", selector = "priority > 3")
+public void onHighPriority(Order order) { }
+----
+
+=== Polling Model
+
+Each `@JmsListener` method is backed by one or more `ConsumerWorker` threads that run a **poll loop**:
+
+1. The worker calls `JMSConsumer.receive(timeout)` — a blocking JMS call that waits for a message up to the configured receive timeout (default 5 seconds).
+2. When a message arrives, the worker invokes the listener method. It then drains additional messages via `receiveNoWait()` to avoid re-entering the blocking call between back-to-back messages.
+3. When `receive()` returns `null` (no message within the timeout), the worker loops back and polls again.
+4. If elastic scaling is enabled and all workers are busy processing, a new worker is spawned. Scaled-up workers are removed after a configurable idle timeout.
+
+For XA mode, each poll cycle creates a fresh `XAJMSContext`, begins a transaction, receives a message, invokes the listener, and commits — or rolls back on failure. The XA context is closed after each cycle.
+
+Workers run on Vert.x blocking thread pool by default, or on virtual threads when `@RunOnVirtualThread` is present.
+Connection failures trigger automatic reconnection with exponential backoff (see <<Reconnection>>).
+
+=== Concurrency
+
+By default, each listener has a single consumer.
+Set `concurrency` for a fixed number of parallel consumers:
+
+[source,java]
+----
+@JmsListener(value = "orders", concurrency = 4)
+public void processFixed(Order order) { }
+----
+
+Combine `concurrency` with `maxConcurrency` for elastic scaling:
+
+[source,java]
+----
+@JmsListener(value = "orders", concurrency = 2, maxConcurrency = 8)
+public void processElastic(Order order) { }
+----
+
+With elastic scaling, extra consumers are spawned when all current consumers are busy, and removed after a configurable idle timeout (default 10 seconds, configurable via `quarkus.jms.listener.scale-down-idle-timeout`).
+
+=== Virtual Thread Support
+
+Listener methods annotated with `@RunOnVirtualThread` run on virtual threads instead of the worker thread pool.
+This is useful for listeners that perform blocking I/O like database calls or HTTP requests:
+
+[source,java]
+----
+@JmsListener("orders")
+@RunOnVirtualThread
+public void process(Order order) {
+    entityManager.persist(order);
+}
+----
+
+Virtual threads work with all acknowledge modes except `TRANSACTED`, which requires session thread affinity.
+They combine well with XA and elastic scaling for concurrent distributed transaction processing:
+
+[source,java]
+----
+@JmsListener(value = "orders", acknowledge = JmsListener.AcknowledgeMode.XA,
+    concurrency = 1, maxConcurrency = 10)
+@RunOnVirtualThread
+public void processXa(Order order) {
+    entityManager.persist(order);
+}
+----
+
+=== Acknowledge Modes
+
+The acknowledge mode controls when and how the broker considers a message successfully delivered:
+
+[cols="20,80"]
+|===
+| Mode | Behavior
+
+| `AUTO` (default)
+| The JMS provider acknowledges the message automatically after the listener method returns.
+  If the listener throws, the message may be redelivered depending on the provider.
+
+| `CLIENT`
+| The extension acknowledges the message after the listener returns successfully.
+  If the listener throws, `session.recover()` is called to trigger redelivery.
+
+| `DUPS_OK`
+| Similar to `AUTO`, but the provider may acknowledge lazily in batches.
+  This can improve throughput at the risk of duplicate delivery after a failure.
+
+| `TRANSACTED`
+| Each message is processed within a local JMS transaction.
+  The extension calls `session.commit()` on success and `session.rollback()` on failure.
+
+| `XA`
+| The message is consumed within a distributed XA transaction managed by Narayana.
+  Both JMS and other XA resources (e.g., database) participate in the same transaction.
+|===
+
+See xref:transactions.adoc[XA Distributed Transactions] for XA details.
+
+=== Reconnection
+
+When a JMS connection is lost, listeners automatically reconnect with exponential backoff:
+
+[source,properties]
+----
+quarkus.jms.listener.reconnect-attempts=-1         # unlimited (default), 0 to disable
+quarkus.jms.listener.reconnect-interval=PT1S       # initial delay (default)
+quarkus.jms.listener.reconnect-max-interval=PT30S  # max delay (default)
+----
+
+Set `reconnect-attempts=0` to disable Quarkus reconnection when the JMS client handles
+it internally (e.g., Artemis `reconnectAttempts` URL parameter).
+
+=== Repeatable Listeners
+
+A single method can listen on multiple destinations using repeated annotations:
+
+[source,java]
+----
+@JmsListener("queue-a")
+@JmsListener("queue-b")
+public void process(String message) { }
+----
+
+== Registering Listeners Programmatically
+
+For dynamic listener setup at runtime, inject `JmsListenerRegistry`.
+Each `register()` call returns a `Closeable` handle to stop the listener:
+
+[source,java]
+----
+@ApplicationScoped
+public class DynamicListeners {
+
+    @Inject
+    JmsListenerRegistry registry;
+
+    Closeable orderListener;
+
+    void onStart(@Observes StartupEvent ev) {
+        registry.register("dynamic-queue", msg -> {
+            String body = msg.getBody(String.class);
+        });
+
+        orderListener = registry.register("order-queue", Order.class, order -> {
+            process(order);
+        });
+    }
+
+    void stopOrderListener() throws IOException {
+        orderListener.close();
+    }
+}
+----
+
+=== Configuring with ListenerConfig
+
+Use `ListenerConfig` to set concurrency, selectors, acknowledge mode, and more:
+
+[source,java]
+----
+var config = ListenerConfig.queue("orders")
+    .concurrency(2)
+    .maxConcurrency(8)
+    .selector("priority > 3")
+    .acknowledgeMode("XA")
+    .runOnVirtualThread();
+
+registry.register(config, Order.class, order -> {
+    entityManager.persist(order);
+});
+----
+
+For topics with durable subscriptions:
+
+[source,java]
+----
+var config = ListenerConfig.topic("events")
+    .subscription("my-durable-sub")
+    .connectionFactory("myFactory");
+
+registry.register(config, Event.class, this::handleEvent);
+----
+
+== Session Pooling
+
+By default, the extension shares a single JMS connection and maintains a bounded session pool per acknowledge mode.
+Under concurrent load, callers block when the pool is exhausted, providing backpressure instead of unbounded session creation.
+
+[source,properties]
+----
+quarkus.jms.pool.enabled=true                    # default
+quarkus.jms.pool.max-sessions=500                # max sessions per ack mode (default: 500)
+quarkus.jms.pool.max-idle-sessions=10            # idle sessions kept per ack mode (default: 10)
+quarkus.jms.pool.borrow-timeout=                 # max wait when pool exhausted (default: indefinite)
+quarkus.jms.pool.idle-timeout=PT5M               # evict idle sessions after (default: PT5M)
+quarkus.jms.pool.reconnect-on-exception=true     # auto-reconnect (default: true)
+----
+
+=== Borrow Timeout Behavior
+
+By default, when all sessions are in use, callers block indefinitely until a session is returned.
+Set `borrow-timeout` to control this:
+
+- **Not set** (default) — block indefinitely until a session becomes available.
+- **`PT30S`** — block up to 30 seconds, then throw `JMSRuntimeException`.
+- **`PT0S`** — fail immediately if no session is available (no blocking).
+
+=== Consumer Caching
+
+By default, consumer caching is disabled (`quarkus.jms.pool.cache-consumers=false`) because most brokers prefetch messages into consumer buffers.
+A cached consumer sitting idle in the pool prefetches messages, making them unavailable to other consumers.
+It is recommended only when prefetch is disabled for JMS consumers (e.g., Artemis `consumerWindowSize=0` or RabbitMQ which does not prefetch by default).
+
+=== Session Pool vs quarkus-pooled-jms
+
+The built-in session pool shares a single TCP connection and pools sessions on top of it.
+This is sufficient for most applications. Use `quarkus-pooled-jms` (Quarkiverse) when you need:
+
+- **Connection pooling** — multiple TCP connections to the broker for higher throughput
+- **Per-connection session limits** — fine-grained control over sessions per connection
+- **JMX monitoring** — built-in JMX MBean support
+
+When `quarkus-pooled-jms` is on the classpath, the built-in session pool is automatically disabled.
+
+[[pool-metrics]]
+=== Pool Metrics
+
+When `quarkus-micrometer` is on the classpath, the session pool exposes the following gauges:
+
+[cols="30,70"]
+|===
+| Metric | Description
+
+| `jms.pool.active` | Sessions currently in use
+| `jms.pool.idle` | Idle sessions in the pool
+| `jms.pool.borrow.total` | Cumulative sessions borrowed
+| `jms.pool.timeout.total` | Borrow attempts that timed out (signals pool exhaustion)
+|===
+
+All metrics are tagged with `factory` (the connection factory identifier).
+
+== Graceful Shutdown
+
+During application shutdown, the extension waits for in-flight messages to complete
+before closing JMS connections:
+
+[source,properties]
+----
+quarkus.jms.listener.shutdown-timeout=PT10S  # default
+----
+
+If messages are still being processed after the timeout, a warning is logged and
+connections are closed. Listeners that use `receiveNoWait()` batching will finish
+their current batch before stopping.
+
+== JMS Message Converters
+
+Messages are automatically converted using `JmsMessageConverter`:
+
+* **Outgoing**: POJOs are serialized to JSON via Jackson, primitives/strings as text messages, `byte[]` as bytes messages
+* **Incoming**: JSON text is deserialized to POJOs, primitives are converted from strings
+
+=== Type ID Property
+
+The converter stores the payload type in a message property for deserialization:
+
+[source,properties]
+----
+quarkus.jms.converter.type-id-property=_type     # default
+----
+
+=== Type ID Mappings
+
+Use short names instead of fully qualified class names:
+
+[source,properties]
+----
+quarkus.jms.converter.type-id-mappings.order=com.example.Order
+quarkus.jms.converter.type-id-mappings.event=com.example.Event
+----
+
+=== Custom Converter
+
+Implement `JmsMessageConverter` and register as a CDI bean:
+
+[source,java]
+----
+@ApplicationScoped
+@Alternative
+@Priority(1)
+public class MyConverter implements JmsMessageConverter {
+    // ...
+}
+----
+
+== Handling Listener Errors
+
+Implement `JmsListenerErrorHandler` as a CDI bean to handle listener failures.
+The handler receives the listener's `JMSContext`, so it can send messages
+(e.g., to a dead letter queue) using the same connection:
+
+[source,java]
+----
+@ApplicationScoped
+public class DeadLetterQueueErrorHandler implements JmsListenerErrorHandler {
+
+    @Override
+    public void handleError(JMSContext context, Message message, String destination, Throwable error) {
+        if (message != null) {
+            context.createProducer().send(context.createQueue("DLQ"), message);
+        }
+    }
+}
+----
+
+If no `JmsListenerErrorHandler` bean is registered, the extension logs the error and lets the acknowledge mode handle the failure (e.g., rollback for `TRANSACTED`/`XA`, session recovery for `CLIENT`).
+
+== Health Check
+
+When `quarkus-smallrye-health` is on the classpath, a readiness health check is registered automatically.
+It reports `UP` when all `@JmsListener` consumers have active connections, and `DOWN` when connections are lost.
+
+Disable via:
+
+[source,properties]
+----
+quarkus.jms.health-enabled=false
+----
+
+== Observability
+
+=== OpenTelemetry Tracing
+
+When `quarkus-opentelemetry` is on the classpath, JMS operations are automatically traced:
+
+[cols="30,20,50"]
+|===
+| Span name | Kind | Description
+
+| `{destination} publish` | PRODUCER | Created on `JmsClient.send()`, trace context injected into message properties
+| `{destination} receive` | CONSUMER | Created on `JmsClient.receive()`, trace context extracted from message
+| `{destination} process` | CONSUMER | Created on `@JmsListener` invocation, trace context extracted from message
+|===
+
+Span attributes follow the https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/[OTel Messaging semantic conventions]:
+`messaging.system`, `messaging.destination.name`, `messaging.destination.kind`, `messaging.operation.type`, `messaging.message.id`.
+
+Trace context is propagated via JMS message properties using the W3C Trace Context format.
+
+=== Micrometer Metrics
+
+When `quarkus-micrometer` is on the classpath, JMS operations are automatically metered:
+
+[cols="30,30,40"]
+|===
+| Timer | Tags | Description
+
+| `jms.send` | `destination`, `outcome` (success/error) | Duration of send operations
+| `jms.receive` | `destination`, `outcome` (received/empty) | Duration of receive operations (includes wait time)
+| `jms.listener` | `destination`, `outcome` (success/error) | Duration of `@JmsListener` message processing
+|===
+
+Session pool metrics are also exposed — see <<pool-metrics>>.
+
+== Spring JMS Compatibility
+
+The `quarkus-spring-jms` compatibility module provides Spring API types (`@JmsListener`, `@SendTo`, `@Header`, `JmsClient`, `JmsResponse`) so existing Spring code compiles with minimal changes.
+See the xref:spring-jms.adoc[Spring JMS Compatibility] guide for details.
+
+If you prefer to migrate to the native Quarkus JMS API, the following table maps Spring concepts to their Quarkus equivalents:
+
+[cols="40,60"]
+|===
+| Spring | Quarkus
+
+| `JmsTemplate` / `JmsClient` | `io.quarkiverse.jms.JmsClient`
+| `@JmsListener` | `io.quarkiverse.jms.JmsListener`
+| `@SendTo` | `io.quarkiverse.jms.SendTo`
+| `@Header` | `io.quarkiverse.jms.JmsHeader`
+| `@Payload` | First non-header parameter (implicit)
+| `JmsResponse` | `io.quarkiverse.jms.JmsResponse`
+| `DefaultMessageListenerContainer` | `ConsumerWorker` (managed automatically)
+| `CachingConnectionFactory` | `SessionPoolingConnectionFactory` (built-in, enabled by default)
+| `JmsMessagingTemplate` | `JmsClient` fluent API
+|===
+
+== JMS 1.1 Compatibility
+
+Some JMS providers (e.g., Amazon SQS, Oracle AQ) only implement the JMS 1.1 API and do not support the JMS 2.0 simplified API (`JMSContext`).
+The Quarkus JMS extension uses `JMSContext` internally, but can wrap JMS 1.1 `Connection` and `Session` objects in a `JMSContext` adapter.
+
+Enable JMS 1.1 compatibility mode:
+
+[source,properties]
+----
+quarkus.jms.jms11=true
+----
+
+When enabled, the extension creates connections via `ConnectionFactory.createConnection()` and
+sessions via `Connection.createSession()`, wrapping them in a `JMSContext`-compatible adapter.
+All JMS extension features (`JmsClient`, `@JmsListener`, session caching, consumer caching) work transparently in this mode.
+
+NOTE: XA transactions are not supported in JMS 1.1 compatibility mode, as `XAJMSContext` requires JMS 2.0.
+
+== IronJacamar Integration
+
+When `quarkus-ironjacamar` is present, `@JmsListener` methods on classes annotated with
+`@ResourceEndpoint` are activated via JCA instead of the default polling consumer.
+The IronJacamar extension consumes `JmsListenerDiscoveredBuildItem`, generates a thin
+`MessageListener` adapter that delegates to the JMS extension's invoker, and produces
+`JmsListenerManagedBuildItem` to prevent the default consumer from starting.
+
+[source,java]
+----
+@ResourceEndpoint  // opt-in to JCA activation
+public class OrderListener {
+
+    @JmsListener("orders")
+    void process(Order order) {
+        // delivered via JCA resource adapter, with XA transaction support
+    }
+}
+----
+
+Without `@ResourceEndpoint`, listeners use the default polling consumer — even if IronJacamar is on the classpath.
+
+== Configuration Reference
+
+include::includes/quarkus-jms.adoc[leveloffset=+2, opts=optional]

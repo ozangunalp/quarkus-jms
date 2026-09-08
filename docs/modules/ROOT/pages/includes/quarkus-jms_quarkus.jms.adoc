@@ -1,0 +1,683 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a|icon:lock[title=Fixed at build time] [[quarkus-jms_quarkus-jms-health-enabled]] [.property-path]##link:#quarkus-jms_quarkus-jms-health-enabled[`+++quarkus.jms.health-enabled+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.health-enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the JMS health check is enabled.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_HEALTH_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_HEALTH_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a| [[quarkus-jms_quarkus-jms-listener-acknowledge-mode]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-acknowledge-mode[`+++quarkus.jms.listener.acknowledge-mode+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.acknowledge-mode+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default acknowledge mode for listeners.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_ACKNOWLEDGE_MODE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_ACKNOWLEDGE_MODE+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|`+++auto+++`
+
+a| [[quarkus-jms_quarkus-jms-listener-concurrency]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-concurrency[`+++quarkus.jms.listener.concurrency+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.concurrency+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default number of concurrent consumers per listener.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_CONCURRENCY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_CONCURRENCY+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`+++1+++`
+
+a| [[quarkus-jms_quarkus-jms-listener-max-concurrency]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-max-concurrency[`+++quarkus.jms.listener.max-concurrency+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.max-concurrency+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default maximum number of concurrent consumers per listener. When set, listeners can scale up from `concurrency` to this value under load, and scale back down when idle.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_MAX_CONCURRENCY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_MAX_CONCURRENCY+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|
+
+a| [[quarkus-jms_quarkus-jms-listener-scale-down-idle-timeout]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-scale-down-idle-timeout[`+++quarkus.jms.listener.scale-down-idle-timeout+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.scale-down-idle-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+How long a scaled-up consumer must be idle before it is removed. Only applies when `maxConcurrency` is set.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_SCALE_DOWN_IDLE_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_SCALE_DOWN_IDLE_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-jms_quarkus-jms[icon:question-circle[title=More information about the Duration format]]
+|`+++PT10S+++`
+
+a| [[quarkus-jms_quarkus-jms-listener-shutdown-timeout]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-shutdown-timeout[`+++quarkus.jms.listener.shutdown-timeout+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.shutdown-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Maximum time to wait for in-flight messages to complete during shutdown.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_SHUTDOWN_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_SHUTDOWN_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-jms_quarkus-jms[icon:question-circle[title=More information about the Duration format]]
+|`+++PT10S+++`
+
+a| [[quarkus-jms_quarkus-jms-listener-reconnect-attempts]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-reconnect-attempts[`+++quarkus.jms.listener.reconnect-attempts+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.reconnect-attempts+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Number of reconnection attempts after a connection failure. `-1` means unlimited retries (default), `0` disables reconnection (useful when the JMS client handles reconnection, e.g., via Artemis `reconnectAttempts`).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_RECONNECT_ATTEMPTS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_RECONNECT_ATTEMPTS+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`+++-1+++`
+
+a| [[quarkus-jms_quarkus-jms-listener-reconnect-interval]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-reconnect-interval[`+++quarkus.jms.listener.reconnect-interval+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.reconnect-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Initial delay before the first reconnection attempt.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_RECONNECT_INTERVAL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_RECONNECT_INTERVAL+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-jms_quarkus-jms[icon:question-circle[title=More information about the Duration format]]
+|`+++PT1S+++`
+
+a| [[quarkus-jms_quarkus-jms-listener-reconnect-max-interval]] [.property-path]##link:#quarkus-jms_quarkus-jms-listener-reconnect-max-interval[`+++quarkus.jms.listener.reconnect-max-interval+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.listener.reconnect-max-interval+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Maximum delay between reconnection attempts. The delay doubles after each failed attempt up to this value.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_LISTENER_RECONNECT_MAX_INTERVAL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_LISTENER_RECONNECT_MAX_INTERVAL+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-jms_quarkus-jms[icon:question-circle[title=More information about the Duration format]]
+|`+++PT30S+++`
+
+a| [[quarkus-jms_quarkus-jms-pool-enabled]] [.property-path]##link:#quarkus-jms_quarkus-jms-pool-enabled[`+++quarkus.jms.pool.enabled+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.pool.enabled+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether to enable connection/session pooling. When enabled, a single shared connection is used and sessions are pooled per acknowledge mode. Automatically disabled when `quarkus-pooled-jms` is present.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_POOL_ENABLED+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_POOL_ENABLED+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a| [[quarkus-jms_quarkus-jms-pool-max-sessions]] [.property-path]##link:#quarkus-jms_quarkus-jms-pool-max-sessions[`+++quarkus.jms.pool.max-sessions+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.pool.max-sessions+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Maximum number of sessions per acknowledge mode. Under concurrent load, callers block until a session becomes available when the pool is exhausted.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_POOL_MAX_SESSIONS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_POOL_MAX_SESSIONS+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`+++500+++`
+
+a| [[quarkus-jms_quarkus-jms-pool-borrow-timeout]] [.property-path]##link:#quarkus-jms_quarkus-jms-pool-borrow-timeout[`+++quarkus.jms.pool.borrow-timeout+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.pool.borrow-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Maximum time to wait for a pooled session to become available. If the pool is exhausted and no session is returned within this duration, a `JMSRuntimeException` is thrown. When empty, callers block indefinitely.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_POOL_BORROW_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_POOL_BORROW_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-jms_quarkus-jms[icon:question-circle[title=More information about the Duration format]]
+|
+
+a| [[quarkus-jms_quarkus-jms-pool-max-idle-sessions]] [.property-path]##link:#quarkus-jms_quarkus-jms-pool-max-idle-sessions[`+++quarkus.jms.pool.max-idle-sessions+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.pool.max-idle-sessions+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Maximum number of idle sessions kept in the pool per acknowledge mode. When a session is returned and the idle count exceeds this value, the excess sessions are closed immediately.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_POOL_MAX_IDLE_SESSIONS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_POOL_MAX_IDLE_SESSIONS+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`+++10+++`
+
+a| [[quarkus-jms_quarkus-jms-pool-idle-timeout]] [.property-path]##link:#quarkus-jms_quarkus-jms-pool-idle-timeout[`+++quarkus.jms.pool.idle-timeout+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.pool.idle-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+How long an idle session can sit in the pool before being evicted. Eviction is performed lazily when sessions are returned to the pool.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_POOL_IDLE_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_POOL_IDLE_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-jms_quarkus-jms[icon:question-circle[title=More information about the Duration format]]
+|`+++PT5M+++`
+
+a| [[quarkus-jms_quarkus-jms-pool-cache-consumers]] [.property-path]##link:#quarkus-jms_quarkus-jms-pool-cache-consumers[`+++quarkus.jms.pool.cache-consumers+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.pool.cache-consumers+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether to cache JMS consumers per destination and selector. Cached consumers survive session pool round-trips, avoiding consumer creation overhead on each receive.
+
+Enable only when the broker's consumer prefetch is disabled (e.g., Artemis `consumerWindowSize=0`), otherwise cached consumers hoard prefetched messages while idle in the pool.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_POOL_CACHE_CONSUMERS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_POOL_CACHE_CONSUMERS+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
+a| [[quarkus-jms_quarkus-jms-pool-reconnect-on-exception]] [.property-path]##link:#quarkus-jms_quarkus-jms-pool-reconnect-on-exception[`+++quarkus.jms.pool.reconnect-on-exception+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.pool.reconnect-on-exception+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether to automatically reconnect when the JMS connection fails.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_POOL_RECONNECT_ON_EXCEPTION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_POOL_RECONNECT_ON_EXCEPTION+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a| [[quarkus-jms_quarkus-jms-jms11]] [.property-path]##link:#quarkus-jms_quarkus-jms-jms11[`+++quarkus.jms.jms11+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.jms11+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Enable JMS 1.1 compatibility mode. When set, the extension wraps JMS 1.1 `Connection` and `Session` objects in a `JMSContext` adapter, allowing providers that do not support the JMS 2.0 simplified API to work (e.g., Amazon SQS, Oracle AQ).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_JMS11+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_JMS11+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
+a| [[quarkus-jms_quarkus-jms-receive-timeout]] [.property-path]##link:#quarkus-jms_quarkus-jms-receive-timeout[`+++quarkus.jms.receive-timeout+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.receive-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default receive timeout for `io.quarkiverse.jms.JmsClient JmsClient` operations. Used when no explicit timeout is provided.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_RECEIVE_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_RECEIVE_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-jms_quarkus-jms[icon:question-circle[title=More information about the Duration format]]
+|`+++PT5S+++`
+
+a| [[quarkus-jms_quarkus-jms-client-delivery-delay]] [.property-path]##link:#quarkus-jms_quarkus-jms-client-delivery-delay[`+++quarkus.jms.client.delivery-delay+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.client.delivery-delay+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default delivery delay for outgoing messages, in milliseconds.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_CLIENT_DELIVERY_DELAY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_CLIENT_DELIVERY_DELAY+++`
+endif::add-copy-button-to-env-var[]
+--
+|long
+|
+
+a| [[quarkus-jms_quarkus-jms-client-delivery-mode]] [.property-path]##link:#quarkus-jms_quarkus-jms-client-delivery-mode[`+++quarkus.jms.client.delivery-mode+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.client.delivery-mode+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default delivery mode: `persistent` or `non-persistent`. Defaults to `persistent`.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_CLIENT_DELIVERY_MODE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_CLIENT_DELIVERY_MODE+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|`+++persistent+++`
+
+a| [[quarkus-jms_quarkus-jms-client-priority]] [.property-path]##link:#quarkus-jms_quarkus-jms-client-priority[`+++quarkus.jms.client.priority+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.client.priority+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default message priority (0-9). `-1` means use JMS provider default.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_CLIENT_PRIORITY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_CLIENT_PRIORITY+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|`+++-1+++`
+
+a| [[quarkus-jms_quarkus-jms-client-time-to-live]] [.property-path]##link:#quarkus-jms_quarkus-jms-client-time-to-live[`+++quarkus.jms.client.time-to-live+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.client.time-to-live+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default time-to-live for outgoing messages, in milliseconds. `-1` means unlimited.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_CLIENT_TIME_TO_LIVE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_CLIENT_TIME_TO_LIVE+++`
+endif::add-copy-button-to-env-var[]
+--
+|long
+|`+++-1+++`
+
+a| [[quarkus-jms_quarkus-jms-converter-type-id-property]] [.property-path]##link:#quarkus-jms_quarkus-jms-converter-type-id-property[`+++quarkus.jms.converter.type-id-property+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.converter.type-id-property+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The JMS message property name used to store the payload type for deserialization.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_CONVERTER_TYPE_ID_PROPERTY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_CONVERTER_TYPE_ID_PROPERTY+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|`+++_type+++`
+
+a| [[quarkus-jms_quarkus-jms-converter-type-id-mappings-type-id-mappings]] [.property-path]##link:#quarkus-jms_quarkus-jms-converter-type-id-mappings-type-id-mappings[`+++quarkus.jms.converter.type-id-mappings."type-id-mappings"+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.converter.type-id-mappings."type-id-mappings"+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Mappings from short type names to fully qualified class names. When set, the short name is used in the type ID property instead of the FQCN. Example: `quarkus.jms.converter.type-id-mappings.order=com.example.Order`
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_CONVERTER_TYPE_ID_MAPPINGS__TYPE_ID_MAPPINGS_+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_CONVERTER_TYPE_ID_MAPPINGS__TYPE_ID_MAPPINGS_+++`
+endif::add-copy-button-to-env-var[]
+--
+|Map<String,String>
+|
+
+a| [[quarkus-jms_quarkus-jms-destinations-destinations-destination]] [.property-path]##link:#quarkus-jms_quarkus-jms-destinations-destinations-destination[`+++quarkus.jms.destinations."destinations".destination+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.destinations."destinations".destination+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The JMS destination name (queue or topic name on the broker). When not set, the configuration key is used as the destination name.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__DESTINATION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__DESTINATION+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-jms_quarkus-jms-destinations-destinations-connection-factory]] [.property-path]##link:#quarkus-jms_quarkus-jms-destinations-destinations-connection-factory[`+++quarkus.jms.destinations."destinations".connection-factory+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.destinations."destinations".connection-factory+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Named ConnectionFactory identifier.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__CONNECTION_FACTORY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__CONNECTION_FACTORY+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-jms_quarkus-jms-destinations-destinations-selector]] [.property-path]##link:#quarkus-jms_quarkus-jms-destinations-destinations-selector[`+++quarkus.jms.destinations."destinations".selector+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.destinations."destinations".selector+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+JMS message selector for receive and browse operations.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__SELECTOR+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__SELECTOR+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-jms_quarkus-jms-destinations-destinations-priority]] [.property-path]##link:#quarkus-jms_quarkus-jms-destinations-destinations-priority[`+++quarkus.jms.destinations."destinations".priority+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.destinations."destinations".priority+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Default message priority (0-9).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__PRIORITY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__PRIORITY+++`
+endif::add-copy-button-to-env-var[]
+--
+|int
+|
+
+a| [[quarkus-jms_quarkus-jms-destinations-destinations-ttl]] [.property-path]##link:#quarkus-jms_quarkus-jms-destinations-destinations-ttl[`+++quarkus.jms.destinations."destinations".ttl+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.destinations."destinations".ttl+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Time-to-live for outgoing messages (ISO-8601 duration, e.g., PT60S).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__TTL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__TTL+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-jms_quarkus-jms-destinations-destinations-delivery-delay]] [.property-path]##link:#quarkus-jms_quarkus-jms-destinations-destinations-delivery-delay[`+++quarkus.jms.destinations."destinations".delivery-delay+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.destinations."destinations".delivery-delay+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Delivery delay for outgoing messages (ISO-8601 duration, e.g., PT5M).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__DELIVERY_DELAY+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__DELIVERY_DELAY+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a| [[quarkus-jms_quarkus-jms-destinations-destinations-delivery-mode]] [.property-path]##link:#quarkus-jms_quarkus-jms-destinations-destinations-delivery-mode[`+++quarkus.jms.destinations."destinations".delivery-mode+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.jms.destinations."destinations".delivery-mode+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Delivery mode: `persistent` or `non_persistent`.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__DELIVERY_MODE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_JMS_DESTINATIONS__DESTINATIONS__DELIVERY_MODE+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+|===
+
+ifndef::no-duration-note[]
+[NOTE]
+[id=duration-note-anchor-quarkus-jms_quarkus-jms]
+.About the Duration format
+====
+To write duration values, use the standard `java.time.Duration` format.
+See the link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html#parse(java.lang.CharSequence)[Duration#parse() Java API documentation] for more information.
+
+You can also use a simplified format, starting with a number:
+
+* If the value is only a number, it represents time in seconds.
+* If the value is a number followed by `ms`, it represents time in milliseconds.
+
+In other cases, the simplified format is translated to the `java.time.Duration` format for parsing:
+
+* If the value is a number followed by `h`, `m`, or `s`, it is prefixed with `PT`.
+* If the value is a number followed by `d`, it is prefixed with `P`.
+====
+endif::no-duration-note[]

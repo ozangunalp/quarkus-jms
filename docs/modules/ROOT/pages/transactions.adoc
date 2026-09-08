@@ -1,0 +1,127 @@
+= XA Distributed Transactions
+include::./includes/attributes.adoc[]
+
+XA transactions coordinate JMS message consumption with other XA resources (e.g., database) in a single atomic transaction.
+The `@JmsListener`, Reactive Messaging connector, and `JmsClient` all support XA.
+
+== Prerequisites
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-narayana-jta</artifactId>
+</dependency>
+----
+
+The `ConnectionFactory` must implement `XAConnectionFactory` (Artemis does).
+
+== @JmsListener with XA
+
+[source,java]
+----
+@JmsListener(value = "orders", acknowledge = JmsListener.AcknowledgeMode.XA)
+public void process(Order order) {
+    entityManager.persist(order);
+    // Both JMS consume and DB insert commit atomically
+}
+----
+
+The container manages the full XA lifecycle on the listener thread: `tm.begin()` -> enlist XA resource -> receive -> invoke -> `tm.commit()` (or rollback on error).
+
+== Reactive Messaging with XA
+
+[source,properties]
+----
+mp.messaging.incoming.orders.connector=smallrye-jms
+mp.messaging.incoming.orders.transaction-mode=xa
+----
+
+[source,java]
+----
+@Incoming("orders")
+public void process(Order order) {
+    entityManager.persist(order);
+}
+----
+
+XA with the Reactive Messaging connector uses a **suspend/resume** mechanism:
+
+1. The poller starts an XA transaction, receives the message, and suspends the transaction
+2. A custom invoker resumes the transaction on the processing thread before the `@Incoming` method
+3. After processing, the transaction is suspended again
+4. The commit handler resumes and commits (or rollback handler resumes and rolls back)
+
+This works with `@Blocking`, `@NonBlocking`, and `@RunOnVirtualThread` — the transaction follows the message via metadata, not thread-local state.
+
+== JmsClient with XA
+
+`receiveWith` participates in the caller's transaction.
+When called inside a `@Transactional` method, all receives and database operations commit or roll back atomically:
+
+[source,java]
+----
+@Transactional
+void processBatch() {
+    orders.receiveWith(receiver -> {
+        receiver.receive().ifPresent(entityManager::persist);
+        receiver.receive().ifPresent(entityManager::persist);
+    });
+}
+----
+
+== XA with Virtual Threads
+
+[source,java]
+----
+@JmsListener(value = "orders", acknowledge = JmsListener.AcknowledgeMode.XA,
+    concurrency = 1, maxConcurrency = 10)
+@RunOnVirtualThread
+public void process(Order order) {
+    entityManager.persist(order);
+}
+----
+
+Multiple messages can be processed concurrently on virtual threads, each with its own independent XA transaction.
+
+The same applies to Reactive Messaging:
+
+[source,java]
+----
+@Incoming("orders")
+@RunOnVirtualThread
+public void process(Order order) {
+    entityManager.persist(order);
+}
+----
+
+== Chained XA Listeners
+
+Multiple XA listeners can form a processing pipeline where each stage atomically consumes, writes to the database, and forwards to the next stage:
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderPipeline {
+
+    @Inject JmsClient jms;
+    @Inject EntityManager em;
+
+    @JmsListener(value = "incoming-orders", acknowledge = JmsListener.AcknowledgeMode.XA)
+    public void validate(Order order) {
+        em.persist(new AuditLog("validated", order.id()));
+        jms.queue("validated-orders").send(order);
+        // XA commit: consume + DB insert + JMS send are atomic
+        // If this method throws, all three are rolled back
+    }
+
+    @JmsListener(value = "validated-orders", acknowledge = JmsListener.AcknowledgeMode.XA)
+    public void fulfill(Order order) {
+        em.persist(new AuditLog("fulfilled", order.id()));
+        // XA commit: consume + DB insert are atomic
+    }
+}
+----
+
+If the first listener fails, the message stays on `incoming-orders` and nothing is sent to `validated-orders`.
+If the second listener fails, the message stays on `validated-orders` and the DB insert is rolled back.

@@ -1,0 +1,169 @@
+= Reactive Messaging Connector
+include::./includes/attributes.adoc[]
+
+For channel-based messaging with `@Incoming` / `@Outgoing`, add the Reactive Messaging JMS connector:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.quarkiverse.jms</groupId>
+    <artifactId>quarkus-messaging-jms</artifactId>
+</dependency>
+----
+
+== Incoming Channels
+
+Configure a channel to consume messages from a JMS destination:
+
+[source,properties]
+----
+mp.messaging.incoming.orders.connector=smallrye-jms
+mp.messaging.incoming.orders.destination=order-queue
+----
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderProcessor {
+
+    @Incoming("orders")
+    public void process(Order order) {
+        entityManager.persist(order);
+    }
+}
+----
+
+If `destination` is omitted, the channel name is used as the destination name.
+
+== Outgoing Channels
+
+Configure a channel to send messages to a JMS destination:
+
+[source,properties]
+----
+mp.messaging.outgoing.notifications.connector=smallrye-jms
+mp.messaging.outgoing.notifications.destination=notification-queue
+----
+
+[source,java]
+----
+@ApplicationScoped
+public class NotificationSender {
+
+    @Channel("notifications")
+    Emitter<Notification> emitter;
+
+    public void notify(Notification notification) {
+        emitter.send(notification);
+    }
+}
+----
+
+== Processing Pipelines
+
+Combine `@Incoming` and `@Outgoing` to build processing pipelines:
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderProcessor {
+
+    @Incoming("orders")
+    @Outgoing("notifications")
+    public Notification process(Order order) {
+        return new Notification(order.id(), "processed");
+    }
+}
+----
+
+== Topics
+
+Set `destination-type=topic` to consume from or produce to a JMS topic:
+
+[source,properties]
+----
+mp.messaging.incoming.events.connector=smallrye-jms
+mp.messaging.incoming.events.destination=event-topic
+mp.messaging.incoming.events.destination-type=topic
+mp.messaging.incoming.events.durable=true
+----
+
+== Transaction Modes
+
+The connector supports three transaction modes:
+
+[source,properties]
+----
+mp.messaging.incoming.orders.transaction-mode=none    # default — no transaction
+mp.messaging.incoming.orders.transaction-mode=local   # JMS session transaction
+mp.messaging.incoming.orders.transaction-mode=xa      # XA distributed transaction
+----
+
+With `local`, the JMS session is committed after successful processing and rolled back on failure.
+With `xa`, the message consumption participates in a distributed XA transaction — see xref:transactions.adoc[XA Distributed Transactions].
+
+== Failure Strategies
+
+[source,properties]
+----
+mp.messaging.incoming.orders.failure-strategy=fail              # default — stop on failure
+mp.messaging.incoming.orders.failure-strategy=ignore            # log and continue
+mp.messaging.incoming.orders.failure-strategy=dead-letter-queue # forward to DLQ
+----
+
+For transactional modes, the failure handler composes: rollback first, then delegate to the base strategy.
+
+== Retry
+
+Terminal errors can be retried automatically:
+
+[source,properties]
+----
+mp.messaging.incoming.orders.retry=true              # default
+mp.messaging.incoming.orders.retry.max-retries=3     # default
+----
+
+Set `retry=false` to disable automatic retries.
+
+== Named Connection Factories
+
+Target a specific broker by referencing a `ConnectionFactory` CDI bean qualified with `@Identifier`:
+
+[source,properties]
+----
+mp.messaging.incoming.orders.connection-factory-name=broker-b
+----
+
+== Incoming Channel Configuration Reference
+
+[cols="40,10,50"]
+|===
+| Property | Default | Description
+
+| `connector` | | Must be `smallrye-jms`
+| `destination` | channel name | Queue or topic name
+| `destination-type` | `queue` | `queue` or `topic`
+| `connection-factory-name` | | Named ConnectionFactory
+| `selector` | | JMS message selector
+| `session-mode` | `AUTO_ACKNOWLEDGE` | Session mode
+| `transaction-mode` | `none` | `none`, `local`, or `xa`
+| `failure-strategy` | `fail` | `fail`, `ignore`, or `dead-letter-queue`
+| `durable` | `false` | Durable subscription
+| `broadcast` | `false` | Dispatch to multiple subscribers
+| `tracing-enabled` | `true` | OpenTelemetry tracing
+| `retry` | `true` | Retry on terminal errors
+| `retry.max-retries` | `3` | Max retry attempts
+|===
+
+== Outgoing Channel Configuration Reference
+
+[cols="40,10,50"]
+|===
+| Property | Default | Description
+
+| `connector` | | Must be `smallrye-jms`
+| `destination` | channel name | Queue or topic name
+| `destination-type` | `queue` | `queue` or `topic`
+| `connection-factory-name` | | Named ConnectionFactory
+| `tracing-enabled` | `true` | OpenTelemetry tracing
+|===
