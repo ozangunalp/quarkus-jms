@@ -32,12 +32,13 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>999-SNAPSHOT</quarkus.version>
+        <quarkus.version>4.0.0.Beta1</quarkus.version>
+        <smallrye-reactive-messaging.version>5.0.0-RC1</smallrye-reactive-messaging.version>
         <artemis.version>2.55.0</artemis.version>
         <assertj.version>3.27.7</assertj.version>
         <wiremock.version>3.13.2</wiremock.version>
         <jakarta.jms-api.version>3.1.0</jakarta.jms-api.version>
-        <quarkus-spring-api.version>7.0.SP2-SNAPSHOT</quarkus-spring-api.version>
+        <quarkus-spring-api.version>7.0.SP2</quarkus-spring-api.version>
         <quarkus-artemis.version>3.14.3</quarkus-artemis.version>
         <quarkus-pooled-jms.version>2.13.0</quarkus-pooled-jms.version>
     </properties>
@@ -55,6 +56,13 @@
                 <groupId>io.quarkiverse.artemis</groupId>
                 <artifactId>quarkus-artemis-bom</artifactId>
                 <version>${quarkus-artemis.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.smallrye.reactive</groupId>
+                <artifactId>smallrye-reactive-messaging-bom</artifactId>
+                <version>${smallrye-reactive-messaging.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
