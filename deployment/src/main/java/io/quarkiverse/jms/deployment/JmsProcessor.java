@@ -51,6 +51,8 @@ import io.quarkiverse.jms.runtime.JmsListenerRegistryImpl;
 import io.quarkiverse.jms.runtime.JmsMdcInstrumentation;
 import io.quarkiverse.jms.runtime.JmsMessageConverterResolver;
 import io.quarkiverse.jms.runtime.JmsRecorder;
+import io.quarkiverse.jms.spi.deployment.JmsListenerDiscoveredBuildItem;
+import io.quarkiverse.jms.spi.deployment.JmsListenerManagedBuildItem;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AnnotationsTransformerBuildItem;
 import io.quarkus.arc.deployment.CustomScopeAnnotationsBuildItem;
@@ -78,9 +80,6 @@ import io.quarkus.gizmo.FieldDescriptor;
 import io.quarkus.gizmo.MethodCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import io.quarkus.gizmo.ResultHandle;
-import io.quarkus.jms.spi.deployment.ConnectionFactoryWrapperBuildItem;
-import io.quarkus.jms.spi.deployment.JmsListenerDiscoveredBuildItem;
-import io.quarkus.jms.spi.deployment.JmsListenerManagedBuildItem;
 import io.quarkus.smallrye.health.deployment.spi.HealthBuildItem;
 
 class JmsProcessor {
@@ -346,9 +345,13 @@ class JmsProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    void applyConnectionFactoryWrapper(JmsRecorder recorder, Optional<ConnectionFactoryWrapperBuildItem> wrapper) {
-        if (wrapper.isPresent()) {
-            recorder.setConnectionFactoryWrapper(wrapper.get().getWrapper());
+    void applyConnectionFactoryWrapper(JmsRecorder recorder,
+            Optional<io.quarkiverse.jms.spi.deployment.ConnectionFactoryWrapperBuildItem> wrapperNew,
+            Optional<io.quarkus.jms.spi.deployment.ConnectionFactoryWrapperBuildItem> wrapperLegacy) {
+        if (wrapperNew.isPresent()) {
+            recorder.setConnectionFactoryWrapper(wrapperNew.get().getWrapper());
+        } else if (wrapperLegacy.isPresent()) {
+            recorder.setConnectionFactoryWrapper(wrapperLegacy.get().getWrapper());
         }
     }
 
