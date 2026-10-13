@@ -14,7 +14,7 @@
     <name>Quarkus JMS - Integration Tests - RabbitMQ</name>
 
     <properties>
-        <rabbitmq-jms.version>3.4.0</rabbitmq-jms.version>
+        <rabbitmq-jms.version>3.9.0</rabbitmq-jms.version>
     </properties>
 
     <dependencies>
