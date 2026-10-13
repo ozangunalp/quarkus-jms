@@ -1,6 +1,9 @@
 package io.quarkiverse.it.jms.xa;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import javax.sql.DataSource;
 
 import jakarta.inject.Inject;
 import jakarta.jms.ConnectionFactory;
@@ -21,10 +24,7 @@ public class XaResource {
     ConnectionFactory connectionFactory;
 
     @Inject
-    XaProcessor processor;
-
-    @Inject
-    XaConcurrentProcessor concurrentProcessor;
+    DataSource dataSource;
 
     @Inject
     XaChainedListenerProcessor chainedProcessor;
@@ -34,14 +34,6 @@ public class XaResource {
 
     @Inject
     EntityManager entityManager;
-
-    @POST
-    @Path("/send")
-    public void send(String message) {
-        try (JMSContext context = connectionFactory.createContext()) {
-            context.createProducer().send(context.createQueue("xa-queue"), message);
-        }
-    }
 
     @POST
     @Path("/send-to-client-queue")
@@ -60,29 +52,6 @@ public class XaResource {
     }
 
     @POST
-    @Path("/send-to-process-queue")
-    public void sendToProcessQueue(String message) {
-        try (JMSContext context = connectionFactory.createContext()) {
-            context.createProducer().send(context.createQueue("process-input-queue"), message);
-        }
-    }
-
-    @GET
-    @Path("/receive-from-process-output")
-    public String receiveFromProcessOutput() {
-        try (JMSContext context = connectionFactory.createContext()) {
-            jakarta.jms.Message msg = context.createConsumer(
-                    context.createQueue("process-output-queue")).receive(5000);
-            if (msg == null) {
-                return null;
-            }
-            return msg.getBody(String.class);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @POST
     @Path("/send-to-listener-queue")
     public void sendToListenerQueue(String message) {
         try (JMSContext context = connectionFactory.createContext()) {
@@ -96,27 +65,6 @@ public class XaResource {
         try (JMSContext context = connectionFactory.createContext()) {
             context.createProducer().send(context.createQueue("xa-listener-rollback-queue"), message);
         }
-    }
-
-    @POST
-    @Path("/send-to-concurrent-queue")
-    public void sendToConcurrentQueue(String message) {
-        try (JMSContext context = connectionFactory.createContext()) {
-            context.createProducer().send(context.createQueue("xa-concurrent-queue"), message);
-        }
-    }
-
-    @GET
-    @Path("/concurrent/processed")
-    public List<String> concurrentProcessed() {
-        return concurrentProcessor.getProcessed();
-    }
-
-    @GET
-    @Path("/concurrent/max-inflight")
-    @Produces(MediaType.TEXT_PLAIN)
-    public int concurrentMaxInflight() {
-        return concurrentProcessor.getMaxInflight();
     }
 
     @POST
@@ -145,14 +93,6 @@ public class XaResource {
     @Path("/chain/stage-b")
     public List<String> chainStageB() {
         return chainedProcessor.getStageBProcessed();
-    }
-
-    @POST
-    @Path("/send-to-connector-rollback-queue")
-    public void sendToConnectorRollbackQueue(String message) {
-        try (JMSContext context = connectionFactory.createContext()) {
-            context.createProducer().send(context.createQueue("xa-connector-rollback-queue"), message);
-        }
     }
 
     @POST
@@ -212,6 +152,16 @@ public class XaResource {
     @GET
     @Path("/messages")
     public List<String> messages() {
-        return processor.getMessages();
+        try (var connection = dataSource.getConnection();
+                var stmt = connection.createStatement();
+                var rs = stmt.executeQuery("SELECT payload FROM xa_messages ORDER BY id")) {
+            List<String> messages = new ArrayList<>();
+            while (rs.next()) {
+                messages.add(rs.getString("payload"));
+            }
+            return messages;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
