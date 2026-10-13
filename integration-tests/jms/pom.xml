@@ -20,12 +20,6 @@
             <artifactId>quarkus-jms</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.quarkiverse.jms</groupId>
-            <artifactId>quarkus-messaging-jms</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <!-- Artemis JMS ConnectionFactory provider (Quarkiverse) -->
         <dependency>
             <groupId>io.quarkiverse.artemis</groupId>
@@ -114,19 +108,6 @@
         <dependency>
             <groupId>io.quarkiverse.jms</groupId>
             <artifactId>quarkus-jms-deployment</artifactId>
-            <version>${project.version}</version>
-            <type>pom</type>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkiverse.jms</groupId>
-            <artifactId>quarkus-messaging-jms-deployment</artifactId>
             <version>${project.version}</version>
             <type>pom</type>
             <scope>test</scope>

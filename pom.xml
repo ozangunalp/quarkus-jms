@@ -18,7 +18,6 @@
         <module>deployment</module>
         <module>runtime</module>
         <module>spring-jms</module>
-        <module>reactive-messaging</module>
     </modules>
 
     <scm>
