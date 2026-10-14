@@ -38,7 +38,7 @@
         <wiremock.version>3.13.2</wiremock.version>
         <jakarta.jms-api.version>3.1.0</jakarta.jms-api.version>
         <quarkus-spring-api.version>7.0.SP2</quarkus-spring-api.version>
-        <quarkus-artemis.version>3.14.3</quarkus-artemis.version>
+        <quarkus-artemis.version>3.15.0</quarkus-artemis.version>
         <quarkus-pooled-jms.version>2.13.0</quarkus-pooled-jms.version>
     </properties>
 
