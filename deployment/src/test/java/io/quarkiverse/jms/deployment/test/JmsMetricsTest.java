@@ -25,6 +25,7 @@ public class JmsMetricsTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(MetricsListener.class, ConnectionFactoryProducer.class,
                             EmbeddedJmsBroker.class)

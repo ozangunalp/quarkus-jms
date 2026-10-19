@@ -27,6 +27,7 @@ public class JmsListenerDuplicatedContextTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(ContextCheckingListener.class, ConnectionFactoryProducer.class,
                             EmbeddedJmsBroker.class)

@@ -18,6 +18,7 @@ public class SessionPoolingTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(ConnectionFactoryProducer.class, EmbeddedJmsBroker.class)
                     .addAsResource("broker.xml"))

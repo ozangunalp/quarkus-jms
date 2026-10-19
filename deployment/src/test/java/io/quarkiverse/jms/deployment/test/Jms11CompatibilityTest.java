@@ -20,6 +20,7 @@ public class Jms11CompatibilityTest {
             .withApplicationRoot(jar -> jar
                     .addClasses(ConnectionFactoryProducer.class, EmbeddedJmsBroker.class)
                     .addAsResource("broker.xml"))
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .overrideConfigKey("quarkus.jms.jms11", "true")
             .overrideConfigKey("quarkus.jms.pool.enabled", "true")
             .overrideConfigKey("quarkus.jms.pool.max-sessions", "2")

@@ -23,6 +23,7 @@ public class JmsListenerVirtualThreadTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(VirtualThreadListener.class, ConnectionFactoryProducer.class,
                             EmbeddedJmsBroker.class)
