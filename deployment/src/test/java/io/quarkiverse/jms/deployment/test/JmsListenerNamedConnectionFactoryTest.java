@@ -26,6 +26,7 @@ public class JmsListenerNamedConnectionFactoryTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(NamedCfProducer.class, NamedCfListener.class,
                             EmbeddedJmsBroker.class)

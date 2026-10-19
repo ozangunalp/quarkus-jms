@@ -23,6 +23,7 @@ public class JmsBrokerFailoverTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(FailoverListener.class, ConnectionFactoryProducer.class,
                             EmbeddedJmsBroker.class)

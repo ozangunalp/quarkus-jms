@@ -24,6 +24,7 @@ public class JmsListenerDurableSubscriptionTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(DurableSubscriber.class, DurableConnectionFactoryProducer.class,
                             EmbeddedJmsBroker.class)

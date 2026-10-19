@@ -23,6 +23,7 @@ public class JmsListenerScalingTest {
 
     @RegisterExtension
     static final QuarkusExtensionTest config = new QuarkusExtensionTest()
+            .overrideConfigKey("quarkus.http.test-port", "0")
             .withApplicationRoot(jar -> jar
                     .addClasses(ScalingListener.class, ConnectionFactoryProducer.class,
                             EmbeddedJmsBroker.class)

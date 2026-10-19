@@ -18,6 +18,7 @@
         <module>deployment</module>
         <module>runtime</module>
         <module>spring-jms</module>
+        <module>quarkus-jms-ironjacamar</module>
     </modules>
 
     <scm>
@@ -41,6 +42,7 @@
         <quarkus-spring-api.version>7.0.SP2</quarkus-spring-api.version>
         <quarkus-artemis.version>3.15.0</quarkus-artemis.version>
         <quarkus-pooled-jms.version>2.13.0</quarkus-pooled-jms.version>
+        <quarkus-ironjacamar.version>2.0.0.Beta2</quarkus-ironjacamar.version>
     </properties>
 
     <dependencyManagement>
@@ -95,6 +97,16 @@
                 <groupId>org.wiremock</groupId>
                 <artifactId>wiremock-standalone</artifactId>
                 <version>${wiremock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.ironjacamar</groupId>
+                <artifactId>quarkus-ironjacamar</artifactId>
+                <version>${quarkus-ironjacamar.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.quarkiverse.ironjacamar</groupId>
+                <artifactId>quarkus-ironjacamar-deployment</artifactId>
+                <version>${quarkus-ironjacamar.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.quarkus</groupId>

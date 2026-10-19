@@ -1,0 +1,5 @@
+---
+artifact: ${project.groupId}:${project.artifactId}:${project.version}
+name: "Quarkus JMS IronJacamar"
+metadata:
+  unlisted: true
