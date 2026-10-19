@@ -44,6 +44,11 @@ class JmsListenerJcaProcessor {
     private static final String JMS_LISTENER_INVOKER_CLASS = "io.quarkiverse.jms.runtime.JmsListenerInvoker";
 
     @BuildStep
+    void disableSessionPooling(BuildProducer<RunTimeConfigurationDefaultBuildItem> configDefaults) {
+        configDefaults.produce(new RunTimeConfigurationDefaultBuildItem("quarkus.jms.pool.enabled", "false"));
+    }
+
+    @BuildStep
     void handleJmsListeners(
             CombinedIndexBuildItem combinedIndex,
             List<JmsListenerDiscoveredBuildItem> listeners,

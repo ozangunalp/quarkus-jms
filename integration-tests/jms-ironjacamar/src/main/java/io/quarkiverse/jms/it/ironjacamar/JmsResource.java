@@ -3,20 +3,20 @@ package io.quarkiverse.jms.it.ironjacamar;
 import java.util.List;
 
 import jakarta.inject.Inject;
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.JMSContext;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
+import io.quarkiverse.jms.JmsClient;
+
 @Path("/jms")
 @Produces(MediaType.APPLICATION_JSON)
 public class JmsResource {
 
     @Inject
-    ConnectionFactory connectionFactory;
+    JmsClient jms;
 
     @Inject
     JmsListenerApp listenerApp;
@@ -24,9 +24,7 @@ public class JmsResource {
     @POST
     @Path("/send")
     public void send(String message) {
-        try (JMSContext ctx = connectionFactory.createContext()) {
-            ctx.createProducer().send(ctx.createQueue("test-queue"), message);
-        }
+        jms.queue("test-queue", String.class).send(message);
     }
 
     @GET
