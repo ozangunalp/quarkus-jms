@@ -1,8 +1,6 @@
 package io.quarkiverse.jms.runtime;
 
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Default;
@@ -12,13 +10,12 @@ import jakarta.inject.Singleton;
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.XAConnectionFactory;
 
+import io.quarkus.arc.ClientProxy;
 import io.smallrye.common.annotation.Identifier;
 
 /**
  * Resolves and caches {@link ConnectionFactory} beans from the CDI container,
  * supporting named instances via {@link Identifier}.
- * When a wrapper is set (e.g., from {@code quarkus-pooled-jms}),
- * it is applied to every resolved factory.
  * <p>
  * Results are cached per identifier — subsequent calls with the same
  * identifier return the cached factory without re-querying CDI.
@@ -34,32 +31,21 @@ public class JmsConnectionFactoryResolver {
     @Any
     Instance<XAConnectionFactory> xaFactories;
 
-    private volatile Function<ConnectionFactory, Object> wrapper;
     private final ConcurrentHashMap<String, ConnectionFactory> cfCache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Optional<XAConnectionFactory>> xaCache = new ConcurrentHashMap<>();
-
-    public void setWrapper(Function<ConnectionFactory, Object> wrapper) {
-        this.wrapper = wrapper;
-    }
+    private final ConcurrentHashMap<String, XAConnectionFactory> xaCache = new ConcurrentHashMap<>();
 
     /**
-     * Resolve a {@link ConnectionFactory} by identifier, applying the external
-     * wrapper (e.g., pooled-jms) if one is configured. Results are cached.
+     * Resolve a {@link ConnectionFactory} by identifier. Results are cached.
      */
     public ConnectionFactory resolve(String identifier) {
         String key = key(identifier);
-        return cfCache.computeIfAbsent(key, k -> {
-            ConnectionFactory factory = select(connectionFactories, identifier).get();
-            if (wrapper != null) {
-                return (ConnectionFactory) wrapper.apply(factory);
-            }
-            return factory;
-        });
+        return cfCache.computeIfAbsent(key, k -> select(connectionFactories, identifier).get());
     }
 
     /**
-     * Resolve as {@link XAConnectionFactory} if an XA-capable factory bean
-     * exists for the given identifier. Results are cached.
+     * Resolve as {@link XAConnectionFactory} by identifier. First looks for an
+     * explicit {@link XAConnectionFactory} bean; falls back to unwrapping the
+     * {@link ConnectionFactory} proxy if the underlying instance implements it.
      *
      * @return the XA factory, or {@code null} if not XA-capable
      */
@@ -68,10 +54,17 @@ public class JmsConnectionFactoryResolver {
         return xaCache.computeIfAbsent(key, k -> {
             Instance<XAConnectionFactory> instance = select(xaFactories, identifier);
             if (instance.isResolvable()) {
-                return Optional.of(instance.get());
+                return instance.get();
             }
-            return Optional.empty();
-        }).orElse(null);
+            // CDI proxy only implements the declared bean type (ConnectionFactory),
+            // unwrap to check if the actual instance also implements XAConnectionFactory
+            ConnectionFactory cf = resolve(identifier);
+            Object unwrapped = ClientProxy.unwrap(cf);
+            if (unwrapped instanceof XAConnectionFactory xa) {
+                return xa;
+            }
+            return null;
+        });
     }
 
     private static String key(String identifier) {

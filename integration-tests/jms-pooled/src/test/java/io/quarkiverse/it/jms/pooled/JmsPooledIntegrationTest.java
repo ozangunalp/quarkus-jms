@@ -35,6 +35,15 @@ public class JmsPooledIntegrationTest {
     }
 
     @Test
+    void connectionFactoryIsNotDoubleWrapped() {
+        String wrappedType = given().get("/jms/wrapped-factory-type")
+                .then().statusCode(200)
+                .extract().body().asString();
+        assertThat(wrappedType).doesNotContain("JmsPoolConnectionFactory");
+        assertThat(wrappedType).doesNotContain("DelegatingJmsPoolConnectionFactory");
+    }
+
+    @Test
     void sendAndReceiveWithPooledJms() {
         given().body("pooled-hello")
                 .post("/jms/send/pooled-queue")

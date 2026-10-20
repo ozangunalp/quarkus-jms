@@ -25,7 +25,6 @@ import jakarta.jms.JMSProducer;
 import jakarta.jms.Message;
 import jakarta.jms.Queue;
 import jakarta.jms.Topic;
-import jakarta.jms.XAConnectionFactory;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
@@ -348,27 +347,12 @@ class JmsProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    void applyConnectionFactoryWrapper(JmsRecorder recorder,
+    void disableBuiltInPoolingForExternalWrappers(JmsRecorder recorder,
             Optional<io.quarkiverse.jms.spi.deployment.ConnectionFactoryWrapperBuildItem> wrapperNew,
             Optional<io.quarkus.jms.spi.deployment.ConnectionFactoryWrapperBuildItem> wrapperLegacy) {
-        if (wrapperNew.isPresent()) {
-            recorder.setConnectionFactoryWrapper(wrapperNew.get().getWrapper());
-        } else if (wrapperLegacy.isPresent()) {
-            recorder.setConnectionFactoryWrapper(wrapperLegacy.get().getWrapper());
+        if (wrapperNew.isPresent() || wrapperLegacy.isPresent()) {
+            recorder.disableBuiltInPooling();
         }
-    }
-
-    @BuildStep
-    @Record(ExecutionTime.RUNTIME_INIT)
-    void registerXaConnectionFactory(JmsRecorder recorder,
-            BuildProducer<SyntheticBeanBuildItem> syntheticBeans) {
-        syntheticBeans.produce(SyntheticBeanBuildItem
-                .configure(XAConnectionFactory.class)
-                .scope(ApplicationScoped.class)
-                .setRuntimeInit()
-                .defaultBean()
-                .supplier(recorder.xaConnectionFactorySupplier())
-                .done());
     }
 
     @BuildStep

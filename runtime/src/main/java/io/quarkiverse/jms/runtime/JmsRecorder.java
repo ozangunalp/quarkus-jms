@@ -1,16 +1,11 @@
 package io.quarkiverse.jms.runtime;
 
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Supplier;
-
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.XAConnectionFactory;
 
 import org.jboss.logging.Logger;
 
 import io.quarkus.arc.Arc;
-import io.quarkus.arc.ClientProxy;
 import io.quarkus.runtime.annotations.Recorder;
 
 @Recorder
@@ -23,9 +18,7 @@ public class JmsRecorder {
         container.startListeners(listeners);
     }
 
-    public void setConnectionFactoryWrapper(Function<ConnectionFactory, Object> wrapper) {
-        JmsConnectionFactoryResolver resolver = Arc.container().instance(JmsConnectionFactoryResolver.class).get();
-        resolver.setWrapper(wrapper);
+    public void disableBuiltInPooling() {
         JmsClientImpl client = Arc.container().instance(JmsClientImpl.class).get();
         client.setExternalPoolingPresent(true);
     }
@@ -49,18 +42,6 @@ public class JmsRecorder {
                 return client.createConfigured(destName, isTopic, messageType, destConfig);
             }
             return isTopic ? client.topic(name, messageType) : client.queue(name, messageType);
-        };
-    }
-
-    public Supplier<XAConnectionFactory> xaConnectionFactorySupplier() {
-        return () -> {
-            ConnectionFactory cf = Arc.container().instance(ConnectionFactory.class).get();
-            Object unwrapped = ClientProxy.unwrap(cf);
-            if (unwrapped instanceof XAConnectionFactory xaConnectionFactory) {
-                return xaConnectionFactory;
-            }
-            throw new IllegalStateException(
-                    "ConnectionFactory does not implement XAConnectionFactory: " + unwrapped.getClass().getName());
         };
     }
 }
