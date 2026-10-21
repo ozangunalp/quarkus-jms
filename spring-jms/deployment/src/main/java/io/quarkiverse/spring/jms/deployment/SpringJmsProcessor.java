@@ -202,17 +202,10 @@ class SpringJmsProcessor {
                 }
             }
 
-            String returnType = method.returnType().name().toString();
-
-            var methodInfo = new JmsListenerBuildItem.MethodInfo(
-                    declaringClass.name().toString(),
-                    method.name(),
+            listeners.produce(new JmsListenerBuildItem(
+                    method,
                     parameters,
                     payloadParameterType,
-                    returnType);
-
-            listeners.produce(new JmsListenerBuildItem(
-                    methodInfo,
                     destination,
                     topic,
                     selector,

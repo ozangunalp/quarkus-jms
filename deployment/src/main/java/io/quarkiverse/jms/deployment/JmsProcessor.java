@@ -2,8 +2,6 @@ package io.quarkiverse.jms.deployment;
 
 import static io.quarkiverse.jms.deployment.DotNames.APPLICATION_SCOPED;
 import static io.quarkiverse.jms.deployment.DotNames.IDENTIFIER;
-import static io.quarkiverse.jms.deployment.DotNames.JACKSON_JMS_CONVERTER;
-import static io.quarkiverse.jms.deployment.DotNames.JMS_CONVERTER;
 import static io.quarkiverse.jms.deployment.DotNames.JMS_QUEUE;
 import static io.quarkiverse.jms.deployment.DotNames.JMS_RESPONSE;
 import static io.quarkiverse.jms.deployment.DotNames.JMS_TOPIC;
@@ -11,6 +9,7 @@ import static io.quarkiverse.jms.deployment.DotNames.SPRING_JMS_RESPONSE;
 import static io.quarkus.arc.processor.DotNames.OBJECT;
 
 import java.lang.annotation.Annotation;
+import java.lang.constant.ClassDesc;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -54,10 +53,14 @@ import io.quarkiverse.jms.spi.deployment.JmsListenerDiscoveredBuildItem;
 import io.quarkiverse.jms.spi.deployment.JmsListenerManagedBuildItem;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AnnotationsTransformerBuildItem;
+import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.CustomScopeAnnotationsBuildItem;
+import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
+import io.quarkus.arc.processor.BeanInfo;
+import io.quarkus.arc.processor.InvokerInfo;
 import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -209,15 +212,10 @@ class JmsProcessor {
                     .findFirst()
                     .orElse(method.parameterType(0).name().toString());
 
-            var methodInfo = new JmsListenerBuildItem.MethodInfo(
-                    method.declaringClass().name().toString(),
-                    method.name(),
+            listeners.produce(new JmsListenerBuildItem(
+                    method,
                     parameters,
                     payloadType,
-                    returnType);
-
-            listeners.produce(new JmsListenerBuildItem(
-                    methodInfo,
                     destination,
                     topic,
                     selector,
@@ -254,33 +252,12 @@ class JmsProcessor {
     }
 
     @BuildStep
-    void generateInvokers(
-            CombinedIndexBuildItem combinedIndex,
-            Capabilities capabilities,
-            List<JmsListenerBuildItem> listeners,
-            BuildProducer<GeneratedClassBuildItem> generatedClasses,
-            BuildProducer<ReflectiveClassBuildItem> reflective,
+    void notifyDiscoveredListeners(List<JmsListenerBuildItem> listeners,
             BuildProducer<JmsListenerDiscoveredBuildItem> discovered) {
-
-        if (listeners.isEmpty()) {
-            return;
-        }
-
-        boolean hasCustomConverters = hasCustomConverters(combinedIndex);
-        boolean jacksonAvailable = capabilities.isPresent(Capability.JACKSON);
-
-        ClassOutput classOutput = (name, data) -> {
-            generatedClasses.produce(new GeneratedClassBuildItem(true, name, data));
-        };
-
         for (JmsListenerBuildItem listener : listeners) {
-            String invokerClassName = generateInvoker(classOutput, listener, hasCustomConverters, jacksonAvailable);
-            reflective.produce(ReflectiveClassBuildItem.builder(invokerClassName)
-                    .constructors(true).build());
-
             discovered.produce(new JmsListenerDiscoveredBuildItem(
-                    listener.method().beanClassName(),
-                    listener.method().methodName(),
+                    listener.beanClassName(),
+                    listener.methodName(),
                     listener.getDestination(),
                     listener.isTopic(),
                     listener.getSelector(),
@@ -289,8 +266,40 @@ class JmsProcessor {
                     listener.getSubscription(),
                     listener.getAcknowledgeMode(),
                     listener.isRunOnVirtualThread(),
-                    listener.method().payloadType(),
-                    invokerClassName));
+                    listener.payloadType(),
+                    listener.invokerClassName()));
+        }
+    }
+
+    @BuildStep
+    void generateInvokers(
+            InvokerFactoryBuildItem invokerFactory,
+            BeanDiscoveryFinishedBuildItem beanDiscovery,
+            List<JmsListenerBuildItem> listeners,
+            BuildProducer<GeneratedClassBuildItem> generatedClasses,
+            BuildProducer<ReflectiveClassBuildItem> reflective) {
+
+        if (listeners.isEmpty()) {
+            return;
+        }
+
+        ClassOutput classOutput = (name, data) -> generatedClasses.produce(new GeneratedClassBuildItem(true, name, data));
+
+        for (JmsListenerBuildItem listener : listeners) {
+            String beanClassName = listener.beanClassName();
+            BeanInfo beanInfo = beanDiscovery.getBeans().stream()
+                    .filter(b -> b.isClassBean() && b.getBeanClass().toString().equals(beanClassName))
+                    .findFirst()
+                    .orElseThrow(() -> new DeploymentException("Bean not found for @JmsListener: " + beanClassName));
+
+            InvokerInfo cdiInvokerInfo = invokerFactory
+                    .createInvoker(beanInfo, listener.method())
+                    .withInstanceLookup()
+                    .build();
+
+            String invokerClassName = generateInvoker(classOutput, listener, toClassName(cdiInvokerInfo));
+            reflective.produce(ReflectiveClassBuildItem.builder(invokerClassName)
+                    .constructors(true).build());
         }
     }
 
@@ -312,11 +321,11 @@ class JmsProcessor {
 
         List<JmsListenerMetadata> metadataList = new ArrayList<>();
         for (JmsListenerBuildItem listener : listeners) {
-            String key = listener.method().beanClassName() + "#" + listener.method().methodName();
+            String key = listener.beanClassName() + "#" + listener.methodName();
             if (!managedKeys.contains(key)) {
                 metadataList.add(new JmsListenerMetadata(
-                        listener.method().beanClassName(),
-                        listener.method().methodName(),
+                        listener.beanClassName(),
+                        listener.methodName(),
                         listener.getDestination(),
                         listener.isTopic(),
                         listener.getSelector(),
@@ -326,11 +335,11 @@ class JmsProcessor {
                         listener.getSubscription(),
                         listener.getAcknowledgeMode(),
                         listener.isRunOnVirtualThread(),
-                        listener.method().invokerClassName(),
-                        listener.method().payloadType()));
+                        listener.invokerClassName(),
+                        listener.payloadType()));
             } else {
                 LOG.debugf("Listener %s.%s is managed by an external provider, skipping container activation",
-                        listener.method().beanClassName(), listener.method().methodName());
+                        listener.beanClassName(), listener.methodName());
             }
         }
 
@@ -430,27 +439,15 @@ class JmsProcessor {
     }
 
     private String generateInvoker(ClassOutput classOutput, JmsListenerBuildItem listener,
-            boolean hasCustomConverters, boolean jacksonAvailable) {
-        String beanClassName = listener.method().beanClassName();
-        String methodName = listener.method().methodName();
-        String payloadType = listener.method().payloadType();
+            String cdiInvokerClassName) {
+        String beanClassName = listener.beanClassName();
+        String methodName = listener.methodName();
+        String payloadType = listener.payloadType();
 
         String invokerClassName = beanClassName.replace('$', '_') + "_" + methodName + "_JmsInvoker";
 
-        // Determine which converter class to use for the payload conversion field
-        Class<?> converterClass;
-        if (hasCustomConverters) {
-            converterClass = JmsMessageConverterResolver.class;
-        } else if (isBuiltInType(payloadType)) {
-            converterClass = BuiltInJmsMessageConverter.class;
-        } else if (jacksonAvailable) {
-            converterClass = JacksonJmsMessageConverter.class;
-        } else {
-            converterClass = JmsMessageConverterResolver.class;
-        }
-
         // Determine return type info
-        String returnType = listener.method().returnType();
+        String returnType = listener.returnType();
         boolean isQuarkusJmsResponse = JMS_RESPONSE.toString().equals(returnType);
         boolean isSpringJmsResponse = SPRING_JMS_RESPONSE.toString().equals(returnType);
         boolean isJmsResponse = isQuarkusJmsResponse || isSpringJmsResponse;
@@ -464,36 +461,31 @@ class JmsProcessor {
                 .build()) {
 
             // Declare cached fields
-            FieldDescriptor beanField = creator.getFieldCreator("bean", beanClassName).getFieldDescriptor();
-            FieldDescriptor converterField = creator.getFieldCreator("converter", converterClass)
+            FieldDescriptor cdiInvokerField = creator.getFieldCreator("cdiInvoker",
+                    "jakarta.enterprise.invoke.Invoker").getFieldDescriptor();
+            FieldDescriptor converterField = creator.getFieldCreator("converter", JmsMessageConverterResolver.class)
                     .getFieldDescriptor();
-            FieldDescriptor resolverField = hasReturn
-                    ? creator.getFieldCreator("resolver", JmsMessageConverterResolver.class).getFieldDescriptor()
-                    : null;
 
-            // Generate constructor — resolve beans from Arc and cache in fields
+            // Generate constructor — instantiate CDI invoker and resolve converter bean
             try (MethodCreator ctor = creator.getMethodCreator("<init>", void.class)) {
                 ctor.invokeSpecialMethod(MethodDescriptor.ofConstructor(Object.class), ctor.getThis());
+
+                ctor.writeInstanceField(cdiInvokerField, ctor.getThis(),
+                        ctor.newInstance(MethodDescriptor.ofConstructor(cdiInvokerClassName)));
 
                 ResultHandle arc = ctor.invokeStaticMethod(
                         MethodDescriptor.ofMethod("io.quarkus.arc.Arc", "container",
                                 "io.quarkus.arc.ArcContainer"));
-
-                ctor.writeInstanceField(beanField, ctor.getThis(), resolveBean(ctor, arc, beanClassName));
-                ctor.writeInstanceField(converterField, ctor.getThis(), resolveBean(ctor, arc, converterClass));
-                if (hasReturn) {
-                    ctor.writeInstanceField(resolverField, ctor.getThis(),
-                            resolveBean(ctor, arc, JmsMessageConverterResolver.class));
-                }
+                ctor.writeInstanceField(converterField, ctor.getThis(),
+                        resolveBean(ctor, arc, JmsMessageConverterResolver.class.getName()));
 
                 ctor.returnVoid();
             }
 
-            // Generate invoke(Message, JMSContext) — reads cached fields instead of CDI lookups
+            // Generate invoke(Message, JMSContext) — delegates to CDI invoker for interceptor support
             try (MethodCreator invoke = creator.getMethodCreator("invoke",
                     void.class, Message.class, JMSContext.class)) {
 
-                ResultHandle castBean = invoke.readInstanceField(beanField, invoke.getThis());
                 ResultHandle castConverter = invoke.readInstanceField(converterField, invoke.getThis());
                 ResultHandle message = invoke.getMethodParam(0);
                 ResultHandle jmsContext = invoke.getMethodParam(1);
@@ -501,14 +493,13 @@ class JmsProcessor {
                 // Convert payload
                 ResultHandle targetClass = invoke.loadClass(payloadType);
                 ResultHandle payload = invoke.invokeVirtualMethod(
-                        MethodDescriptor.ofMethod(converterClass,
+                        MethodDescriptor.ofMethod(JmsMessageConverterResolver.class,
                                 "fromMessage", Object.class, Message.class, Class.class),
                         castConverter, message, targetClass);
                 ResultHandle castPayload = invoke.checkCast(payload, payloadType);
 
                 // Build method parameter array
-                var params = listener.method().parameters();
-                List<String> allParamTypes = listener.method().allParameterTypes();
+                var params = listener.parameters();
                 ResultHandle[] methodArgs = new ResultHandle[params.size()];
 
                 for (int i = 0; i < params.size(); i++) {
@@ -519,14 +510,19 @@ class JmsProcessor {
                     };
                 }
 
-                if (hasReturn) {
-                    ResultHandle converterResolver = invoke.readInstanceField(resolverField, invoke.getThis());
+                // Pack arguments into Object[] and invoke via CDI invoker (preserves interceptor chain)
+                ResultHandle argsArray = invoke.newArray(Object.class, params.size());
+                for (int i = 0; i < params.size(); i++) {
+                    invoke.writeArrayValue(argsArray, i, boxIfPrimitive(invoke, methodArgs[i], params.get(i).type()));
+                }
 
-                    ResultHandle result = invoke.invokeVirtualMethod(
-                            MethodDescriptor.ofMethod(beanClassName, methodName,
-                                    returnType,
-                                    allParamTypes.toArray(new String[0])),
-                            castBean, methodArgs);
+                ResultHandle cdiInvokerRef = invoke.readInstanceField(cdiInvokerField, invoke.getThis());
+                ResultHandle result = invoke.invokeInterfaceMethod(
+                        MethodDescriptor.ofMethod("jakarta.enterprise.invoke.Invoker", "invoke",
+                                Object.class, Object.class, Object[].class),
+                        cdiInvokerRef, invoke.loadNull(), argsArray);
+
+                if (hasReturn) {
 
                     BytecodeCreator replyBlock = invoke.ifNotNull(result).trueBranch();
 
@@ -597,7 +593,7 @@ class JmsProcessor {
                     ResultHandle replyMessage = replyBlock.invokeVirtualMethod(
                             MethodDescriptor.ofMethod(JmsMessageConverterResolver.class,
                                     "toMessage", Message.class, Object.class, JMSContext.class),
-                            converterResolver, replyPayload, jmsContext);
+                            castConverter, replyPayload, jmsContext);
 
                     BytecodeCreator sendBlock = replyBlock.ifNotNull(replyDest).trueBranch();
                     ResultHandle producer = sendBlock.invokeInterfaceMethod(
@@ -607,13 +603,6 @@ class JmsProcessor {
                             MethodDescriptor.ofMethod(JMSProducer.class, "send", JMSProducer.class,
                                     Destination.class, Message.class),
                             producer, replyDest, replyMessage);
-                } else {
-                    // Invoke void method
-                    invoke.invokeVirtualMethod(
-                            MethodDescriptor.ofMethod(beanClassName, methodName,
-                                    void.class,
-                                    allParamTypes.toArray(new String[0])),
-                            castBean, methodArgs);
                 }
 
                 invoke.returnVoid();
@@ -636,31 +625,6 @@ class JmsProcessor {
         return mc.checkCast(bean, beanClassName);
     }
 
-    private static ResultHandle resolveBean(MethodCreator mc, ResultHandle arc, Class<?> beanClass) {
-        return resolveBean(mc, arc, beanClass.getName());
-    }
-
-    private static boolean hasCustomConverters(CombinedIndexBuildItem combinedIndex) {
-        for (ClassInfo implementor : combinedIndex.getIndex().getAllKnownImplementations(JMS_CONVERTER)) {
-            if (!implementor.name().equals(JACKSON_JMS_CONVERTER)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isBuiltInType(String payloadType) {
-        return switch (payloadType) {
-            case "java.lang.String", "byte[]", "[B",
-                    "java.util.Map", "java.util.HashMap",
-                    "jakarta.jms.Message", "jakarta.jms.TextMessage",
-                    "jakarta.jms.BytesMessage", "jakarta.jms.MapMessage",
-                    "jakarta.jms.StreamMessage", "jakarta.jms.ObjectMessage" ->
-                true;
-            default -> false;
-        };
-    }
-
     private static boolean isJmsMessageType(String typeName) {
         return switch (typeName) {
             case "jakarta.jms.Message", "jakarta.jms.TextMessage",
@@ -668,6 +632,32 @@ class JmsProcessor {
                     "jakarta.jms.StreamMessage", "jakarta.jms.ObjectMessage" ->
                 true;
             default -> false;
+        };
+    }
+
+    private static String toClassName(InvokerInfo invokerInfo) {
+        ClassDesc desc = invokerInfo.getClassDesc();
+        String pkg = desc.packageName();
+        return pkg.isEmpty() ? desc.displayName() : pkg + "." + desc.displayName();
+    }
+
+    private static ResultHandle boxIfPrimitive(BytecodeCreator bc, ResultHandle value, String type) {
+        return switch (type) {
+            case "int" -> bc.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(Integer.class, "valueOf", Integer.class, int.class), value);
+            case "long" -> bc.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(Long.class, "valueOf", Long.class, long.class), value);
+            case "boolean" -> bc.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(Boolean.class, "valueOf", Boolean.class, boolean.class), value);
+            case "double" -> bc.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(Double.class, "valueOf", Double.class, double.class), value);
+            case "float" -> bc.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(Float.class, "valueOf", Float.class, float.class), value);
+            case "short" -> bc.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(Short.class, "valueOf", Short.class, short.class), value);
+            case "byte" -> bc.invokeStaticMethod(
+                    MethodDescriptor.ofMethod(Byte.class, "valueOf", Byte.class, byte.class), value);
+            default -> value;
         };
     }
 

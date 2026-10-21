@@ -539,6 +539,29 @@ public void processXa(Order order) {
 }
 ----
 
+=== Fault Tolerance
+
+When `quarkus-smallrye-fault-tolerance` is on the classpath, MicroProfile Fault Tolerance annotations work on `@JmsListener` methods.
+The listener invocation goes through the CDI interceptor chain, so annotations like `@Retry`, `@CircuitBreaker`, `@Timeout`, and `@Fallback` are applied transparently:
+
+[source,java]
+----
+@ApplicationScoped
+public class OrderProcessor {
+
+    @JmsListener("orders")
+    @Retry(maxRetries = 3, delay = 500)
+    @Fallback(fallbackMethod = "onFailure")
+    public void process(Order order) {
+        callExternalService(order);
+    }
+
+    void onFailure(Order order) {
+        log.warn("Processing failed after retries, sending to DLQ");
+    }
+}
+----
+
 === Acknowledge Modes
 
 The acknowledge mode controls when and how the broker considers a message successfully delivered:
