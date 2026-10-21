@@ -2,6 +2,8 @@ package io.quarkiverse.jms.deployment;
 
 import java.util.List;
 
+import org.jboss.jandex.MethodInfo;
+
 import io.quarkus.builder.item.MultiBuildItem;
 
 /**
@@ -10,6 +12,8 @@ import io.quarkus.builder.item.MultiBuildItem;
 public final class JmsListenerBuildItem extends MultiBuildItem {
 
     private final MethodInfo method;
+    private final List<Parameter> parameters;
+    private final String payloadType;
     private final String destination;
     private final boolean topic;
     private final String selector;
@@ -22,11 +26,13 @@ public final class JmsListenerBuildItem extends MultiBuildItem {
     private final String sendToDestination;
     private final boolean sendToTopic;
 
-    public JmsListenerBuildItem(MethodInfo method, String destination,
-            boolean topic, String selector, String connectionFactory, int concurrency,
-            int maxConcurrency, String subscription, String acknowledgeMode,
+    public JmsListenerBuildItem(MethodInfo method, List<Parameter> parameters, String payloadType,
+            String destination, boolean topic, String selector, String connectionFactory,
+            int concurrency, int maxConcurrency, String subscription, String acknowledgeMode,
             boolean runOnVirtualThread, String sendToDestination, boolean sendToTopic) {
         this.method = method;
+        this.parameters = parameters;
+        this.payloadType = payloadType;
         this.destination = destination;
         this.topic = topic;
         this.selector = selector;
@@ -42,6 +48,30 @@ public final class JmsListenerBuildItem extends MultiBuildItem {
 
     public MethodInfo method() {
         return method;
+    }
+
+    public List<Parameter> parameters() {
+        return parameters;
+    }
+
+    public String payloadType() {
+        return payloadType;
+    }
+
+    public String beanClassName() {
+        return method.declaringClass().name().toString();
+    }
+
+    public String methodName() {
+        return method.name();
+    }
+
+    public String returnType() {
+        return method.returnType().name().toString();
+    }
+
+    public String invokerClassName() {
+        return beanClassName().replace('$', '_') + "_" + methodName() + "_JmsInvoker";
     }
 
     public String getDestination() {
@@ -105,22 +135,6 @@ public final class JmsListenerBuildItem extends MultiBuildItem {
         }
 
         record RawMessage(String type) implements Parameter {
-        }
-    }
-
-    public record MethodInfo(
-            String beanClassName,
-            String methodName,
-            List<Parameter> parameters,
-            String payloadType,
-            String returnType) {
-
-        public String invokerClassName() {
-            return beanClassName.replace('$', '_') + "_" + methodName + "_JmsInvoker";
-        }
-
-        public List<String> allParameterTypes() {
-            return parameters.stream().map(Parameter::type).toList();
         }
     }
 }
