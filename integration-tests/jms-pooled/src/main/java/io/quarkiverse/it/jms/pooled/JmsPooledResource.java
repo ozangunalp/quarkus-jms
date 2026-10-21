@@ -50,18 +50,18 @@ public class JmsPooledResource {
     @GET
     @Path("/connection-factory-type")
     public String connectionFactoryType() {
-        return resolver.resolve(null).getClass().getName();
+        return ClientProxy.unwrap(resolver.resolve(null)).getClass().getName();
     }
 
     @GET
     @Path("/wrapped-factory-type")
     public String wrappedFactoryType() {
-        jakarta.jms.ConnectionFactory cf = resolver.resolve(null);
+        Object cf = ClientProxy.unwrap(resolver.resolve(null));
         if (cf instanceof JmsPoolConnectionFactory pooled) {
             Object wrapped = pooled.getConnectionFactory();
             return ClientProxy.unwrap(wrapped).getClass().getName();
         }
-        return ClientProxy.unwrap(cf).getClass().getName();
+        return cf.getClass().getName();
     }
 
     @JmsListener("pooled-listener-queue")
