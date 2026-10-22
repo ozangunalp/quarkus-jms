@@ -41,6 +41,9 @@ public class JmsResource {
     @Inject
     JmsListenerAdvancedApp advancedApp;
 
+    @Inject
+    ConnectorApp connectorApp;
+
     @POST
     @Path("/send/{queue}")
     public void send(@PathParam("queue") String queue, String message) {
@@ -59,6 +62,12 @@ public class JmsResource {
     @Path("/listener/received")
     public List<String> listenerReceived() {
         return listenerApp.getReceived();
+    }
+
+    @GET
+    @Path("/connector/received")
+    public List<String> connectorReceived() {
+        return connectorApp.getReceived();
     }
 
     @POST

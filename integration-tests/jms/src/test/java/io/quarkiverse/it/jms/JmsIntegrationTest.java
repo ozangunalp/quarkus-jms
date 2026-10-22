@@ -50,6 +50,20 @@ public class JmsIntegrationTest {
     }
 
     @Test
+    void connectorIncomingReceivesMessages() {
+        given().body("connector-msg")
+                .post("/jms/send/connector-queue")
+                .then().statusCode(204);
+
+        await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<String> received = get("/jms/connector/received")
+                    .as(new TypeRef<>() {
+                    });
+            assertThat(received).contains("connector-msg");
+        });
+    }
+
+    @Test
     void jmsListenerTypedHeaders() {
         given().body("header-test")
                 .post("/jms/send-with-headers/header-queue")
