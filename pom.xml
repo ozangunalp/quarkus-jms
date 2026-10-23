@@ -44,6 +44,7 @@
         <quarkus-artemis.version>3.15.0</quarkus-artemis.version>
         <quarkus-pooled-jms.version>2.13.0</quarkus-pooled-jms.version>
         <quarkus-ironjacamar.version>2.0.0.Beta2</quarkus-ironjacamar.version>
+        <sundr-maven-plugin.version>0.400.1</sundr-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -155,6 +156,47 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>io.sundr</groupId>
+                <artifactId>sundr-maven-plugin</artifactId>
+                <version>${sundr-maven-plugin.version}</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate-bom</goal>
+                        </goals>
+                        <configuration>
+                            <boms>
+                                <bom>
+                                    <artifactId>quarkus-jms-bom</artifactId>
+                                    <name>Quarkus JMS - BOM</name>
+                                    <description>Centralized dependencyManagement for the Quarkus JMS extensions</description>
+                                    <properties>
+                                        <skipStagingRepositoryClose>true</skipStagingRepositoryClose>
+                                        <sonar.skip>true</sonar.skip>
+                                    </properties>
+                                    <modules>
+                                        <includes>
+                                            <include>*:quarkus-jms</include>
+                                            <include>*:quarkus-jms-deployment</include>
+                                            <include>*:quarkus-jms-spi-deployment</include>
+                                            <include>*:quarkus-messaging-jms</include>
+                                            <include>*:quarkus-messaging-jms-deployment</include>
+                                            <include>*:quarkus-spring-jms</include>
+                                            <include>*:quarkus-spring-jms-deployment</include>
+                                            <include>*:quarkus-jms-ironjacamar</include>
+                                            <include>*:quarkus-jms-ironjacamar-deployment</include>
+                                        </includes>
+                                    </modules>
+                                </bom>
+                            </boms>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
     <profiles>
