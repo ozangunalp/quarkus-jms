@@ -22,6 +22,17 @@ import io.restassured.common.mapper.TypeRef;
 public class JmsXaIntegrationTest {
 
     @Test
+    void rmConnectorXaCommitsBothJmsAndDb() {
+        given().body("connector-xa").post("/xa/send").then().statusCode(204);
+
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<String> messages = get("/xa/messages").as(new TypeRef<>() {
+            });
+            assertThat(messages).contains("connector-xa");
+        });
+    }
+
+    @Test
     void jmsClientSendInXaTransaction() {
         given().body("client-send-xa")
                 .post("/xa-client/send-and-insert")
@@ -52,6 +63,24 @@ public class JmsXaIntegrationTest {
     }
 
     @Test
+    void incomingOutgoingFlowSharesTransaction() {
+        given().body("flow-test")
+                .post("/xa/send-to-process-queue")
+                .then().statusCode(204);
+
+        await().atMost(15, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<String> dbMessages = get("/xa-client/db-messages").as(new TypeRef<>() {
+            });
+            assertThat(dbMessages).contains("processed:flow-test");
+        });
+
+        String forwarded = get("/xa/receive-from-process-output")
+                .then().statusCode(200)
+                .extract().asString();
+        assertThat(forwarded).contains("forwarded:flow-test");
+    }
+
+    @Test
     void jmsListenerXaCommitsBothJmsAndDb() {
         given().body("listener-xa").post("/xa/send-to-listener-queue").then().statusCode(204);
 
@@ -72,6 +101,30 @@ public class JmsXaIntegrationTest {
             });
             assertThat(messages).doesNotContain("should-not-persist-listener:listener-rollback");
         });
+    }
+
+    @Test
+    void xaConcurrentProcessingWithVirtualThreads() {
+        for (int i = 1; i <= 50; i++) {
+            given().body("concurrent-" + i).post("/xa/send-to-concurrent-queue").then().statusCode(204);
+        }
+
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<String> processed = get("/xa/concurrent/processed").as(new TypeRef<>() {
+            });
+            assertThat(processed).hasSize(50);
+        });
+
+        // All messages committed to DB via XA
+        List<String> dbMessages = get("/xa/messages").as(new TypeRef<>() {
+        });
+        for (int i = 1; i <= 50; i++) {
+            assertThat(dbMessages).contains("concurrent:concurrent-" + i);
+        }
+
+        // With @RunOnVirtualThread + 500ms sleep, multiple messages should process concurrently
+        int maxInflight = Integer.parseInt(get("/xa/concurrent/max-inflight").then().extract().asString());
+        assertThat(maxInflight).as("Expected concurrent XA processing with virtual threads").isGreaterThan(1);
     }
 
     @Test
@@ -123,6 +176,17 @@ public class JmsXaIntegrationTest {
         String received = given().post("/xa-client/receive-and-insert")
                 .then().extract().asString();
         assertThat(received).doesNotContain("send-rollback-test");
+    }
+
+    @Test
+    void connectorXaRollbackUndoesDbInsert() {
+        given().body("connector-rollback").post("/xa/send-to-connector-rollback-queue").then().statusCode(204);
+
+        await().atMost(10, TimeUnit.SECONDS).pollDelay(2, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<String> messages = get("/xa/messages").as(new TypeRef<>() {
+            });
+            assertThat(messages).doesNotContain("should-not-persist-connector:connector-rollback");
+        });
     }
 
     @Test

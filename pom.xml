@@ -19,6 +19,7 @@
         <module>runtime</module>
         <module>spring-jms</module>
         <module>quarkus-jms-ironjacamar</module>
+        <module>reactive-messaging</module>
     </modules>
 
     <scm>
@@ -34,7 +35,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>4.0.0.Beta1</quarkus.version>
-        <smallrye-reactive-messaging.version>5.0.0-RC1</smallrye-reactive-messaging.version>
+        <smallrye-reactive-messaging.version>5.0.0-RC2</smallrye-reactive-messaging.version>
         <artemis.version>2.57.0</artemis.version>
         <assertj.version>3.27.7</assertj.version>
         <wiremock.version>3.13.2</wiremock.version>
@@ -122,6 +123,12 @@
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-spring-core-api</artifactId>
                 <version>${quarkus-spring-api.version}</version>
+            </dependency>
+            <!-- remove this once Quarkus core is on top of the most recent RM version -->
+            <dependency>
+                <groupId>io.smallrye.reactive</groupId>
+                <artifactId>smallrye-reactive-messaging-jms</artifactId>
+                <version>${smallrye-reactive-messaging.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
