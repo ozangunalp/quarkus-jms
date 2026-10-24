@@ -765,6 +765,10 @@ This is sufficient for most applications. Use `quarkus-pooled-jms` (Quarkiverse)
 
 When `quarkus-pooled-jms` is on the classpath, the built-in session pool is automatically disabled.
 
+NOTE: If you use `@JmsListener(acknowledge = XA)` or `JmsClient` XA support, set `quarkus.pooled-jms.transaction=disabled`.
+Quarkus JMS manages XA enlistment directly through the `XAConnectionFactory`, which is incompatible with the `quarkus-pooled-jms` XA model (`SESSION_TRANSACTED` with auto-enlistment).
+If you prefer the `quarkus-pooled-jms` XA model, keep `quarkus.pooled-jms.transaction=xa` and use `@Transactional` methods with `createContext(Session.SESSION_TRANSACTED)` directly.
+
 [[pool_metrics]]
 === Pool Metrics
 
