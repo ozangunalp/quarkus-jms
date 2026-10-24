@@ -10,6 +10,7 @@ import jakarta.inject.Singleton;
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.XAConnectionFactory;
 
+import io.quarkiverse.jms.spi.JmsXaRecovery;
 import io.quarkus.arc.ClientProxy;
 import io.smallrye.common.annotation.Identifier;
 
@@ -30,6 +31,9 @@ public class JmsConnectionFactoryResolver {
     @Inject
     @Any
     Instance<XAConnectionFactory> xaFactories;
+
+    @Inject
+    Instance<JmsXaRecovery> xaRecovery;
 
     private final ConcurrentHashMap<String, ConnectionFactory> cfCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, XAConnectionFactory> xaCache = new ConcurrentHashMap<>();
@@ -54,13 +58,20 @@ public class JmsConnectionFactoryResolver {
         return xaCache.computeIfAbsent(key, k -> {
             Instance<XAConnectionFactory> instance = select(xaFactories, identifier);
             if (instance.isResolvable()) {
-                return instance.get();
+                XAConnectionFactory xa = instance.get();
+                if (xaRecovery.isResolvable()) {
+                    xaRecovery.get().register(xa);
+                }
+                return xa;
             }
             // CDI proxy only implements the declared bean type (ConnectionFactory),
             // unwrap to check if the actual instance also implements XAConnectionFactory
             ConnectionFactory cf = resolve(identifier);
             Object unwrapped = ClientProxy.unwrap(cf);
             if (unwrapped instanceof XAConnectionFactory xa) {
+                if (xaRecovery.isResolvable()) {
+                    xaRecovery.get().register(xa);
+                }
                 return xa;
             }
             return null;
