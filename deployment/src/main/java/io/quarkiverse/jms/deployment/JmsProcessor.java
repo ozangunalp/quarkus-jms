@@ -49,6 +49,7 @@ import io.quarkiverse.jms.runtime.JmsListenerRegistryImpl;
 import io.quarkiverse.jms.runtime.JmsMdcInstrumentation;
 import io.quarkiverse.jms.runtime.JmsMessageConverterResolver;
 import io.quarkiverse.jms.runtime.JmsRecorder;
+import io.quarkiverse.jms.runtime.NarayanaJmsXaRecovery;
 import io.quarkiverse.jms.spi.deployment.JmsListenerDiscoveredBuildItem;
 import io.quarkiverse.jms.spi.deployment.JmsListenerManagedBuildItem;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
@@ -61,6 +62,7 @@ import io.quarkus.arc.deployment.SyntheticBeansRuntimeInitBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.arc.processor.InvokerInfo;
+import io.quarkus.bootstrap.classloading.QuarkusClassLoader;
 import io.quarkus.deployment.Capabilities;
 import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -361,6 +363,19 @@ class JmsProcessor {
             Optional<io.quarkus.jms.spi.deployment.ConnectionFactoryWrapperBuildItem> wrapperLegacy) {
         if (wrapperNew.isPresent() || wrapperLegacy.isPresent()) {
             recorder.disableBuiltInPooling();
+        }
+    }
+
+    @BuildStep
+    void registerXaRecoveryBean(Capabilities capabilities,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans) {
+        if (capabilities.isPresent(Capability.TRANSACTIONS)
+                && QuarkusClassLoader.isClassPresentAtRuntime("org.jboss.narayana.jta.jms.JmsXAResourceRecoveryHelper")
+                && QuarkusClassLoader.isClassPresentAtRuntime("org.jboss.tm.XAResourceRecoveryRegistry")) {
+            additionalBeans.produce(AdditionalBeanBuildItem.builder()
+                    .addBeanClass(NarayanaJmsXaRecovery.class)
+                    .setUnremovable()
+                    .build());
         }
     }
 

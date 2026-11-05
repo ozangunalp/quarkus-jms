@@ -426,14 +426,15 @@ abstract class JmsDestinationImpl<T> implements JmsDestination<T> {
             }
             return new JmsClientImpl.ManagedContext(xaContext, true);
         } else {
+            LOG.warnf("No XAConnectionFactory available for '%s' - falling back to a local transacted session. "
+                    + "JMS and other resources will NOT commit atomically.", destinationName);
             JMSContext txContext = resolvedFactory().createContext(Session.SESSION_TRANSACTED);
             try {
                 activeTransaction.registerSynchronization(
                         new JmsClientImpl.TransactedContextSynchronization(txContext));
             } catch (Exception e) {
                 txContext.close();
-                throw new JmsException(
-                        "Failed to register JMS session synchronization", e);
+                throw new JmsException("Failed to register JMS session synchronization", e);
             }
             return new JmsClientImpl.ManagedContext(txContext, true);
         }
