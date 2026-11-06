@@ -54,7 +54,7 @@ import io.quarkiverse.jms.spi.deployment.JmsListenerDiscoveredBuildItem;
 import io.quarkiverse.jms.spi.deployment.JmsListenerManagedBuildItem;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.AnnotationsTransformerBuildItem;
-import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
+import io.quarkus.arc.deployment.BeanRegistrationPhaseBuildItem;
 import io.quarkus.arc.deployment.CustomScopeAnnotationsBuildItem;
 import io.quarkus.arc.deployment.InvokerFactoryBuildItem;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
@@ -276,7 +276,7 @@ class JmsProcessor {
     @BuildStep
     void generateInvokers(
             InvokerFactoryBuildItem invokerFactory,
-            BeanDiscoveryFinishedBuildItem beanDiscovery,
+            BeanRegistrationPhaseBuildItem beanRegistrationPhase,
             List<JmsListenerBuildItem> listeners,
             BuildProducer<GeneratedClassBuildItem> generatedClasses,
             BuildProducer<ReflectiveClassBuildItem> reflective) {
@@ -289,9 +289,9 @@ class JmsProcessor {
 
         for (JmsListenerBuildItem listener : listeners) {
             String beanClassName = listener.beanClassName();
-            BeanInfo beanInfo = beanDiscovery.getBeans().stream()
-                    .filter(b -> b.isClassBean() && b.getBeanClass().toString().equals(beanClassName))
-                    .findFirst()
+            BeanInfo beanInfo = beanRegistrationPhase.getContext().beans().classBeans()
+                    .withBeanClass(DotName.createSimple(beanClassName))
+                    .firstResult()
                     .orElseThrow(() -> new DeploymentException("Bean not found for @JmsListener: " + beanClassName));
 
             InvokerInfo cdiInvokerInfo = invokerFactory
