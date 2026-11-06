@@ -116,11 +116,13 @@ public class JmsXaIntegrationTest {
         });
 
         // All messages committed to DB via XA
-        List<String> dbMessages = get("/xa/messages").as(new TypeRef<>() {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<String> dbMessages = get("/xa/messages").as(new TypeRef<>() {
+            });
+            for (int i = 1; i <= 50; i++) {
+                assertThat(dbMessages).contains("concurrent:concurrent-" + i);
+            }
         });
-        for (int i = 1; i <= 50; i++) {
-            assertThat(dbMessages).contains("concurrent:concurrent-" + i);
-        }
 
         // With @RunOnVirtualThread + 500ms sleep, multiple messages should process concurrently
         int maxInflight = Integer.parseInt(get("/xa/concurrent/max-inflight").then().extract().asString());
@@ -201,11 +203,13 @@ public class JmsXaIntegrationTest {
             assertThat(processed).hasSize(20);
         });
 
-        List<String> dbMessages = get("/xa/messages").as(new TypeRef<>() {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<String> dbMessages = get("/xa/messages").as(new TypeRef<>() {
+            });
+            for (int i = 1; i <= 20; i++) {
+                assertThat(dbMessages).contains("listener-concurrent:lc-" + i);
+            }
         });
-        for (int i = 1; i <= 20; i++) {
-            assertThat(dbMessages).contains("listener-concurrent:lc-" + i);
-        }
 
         int maxInflight = Integer.parseInt(
                 get("/xa/listener-concurrent/max-inflight").then().extract().asString());
