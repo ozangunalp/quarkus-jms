@@ -22,8 +22,8 @@ This brings in the Spring JMS API types and the Quarkus JMS runtime. You still n
 |===
 | Spring annotation | Package | Mapping
 
-| `@JmsListener` | `org.springframework.jms.annotation` | Mapped to `io.quarkiverse.jms.JmsListener` — destination, selector, concurrency, and subscription are all supported
-| `@JmsListeners` | `org.springframework.jms.annotation` | Repeatable container — each listener is mapped individually
+| `@JmsListener` | `org.springframework.jms.annotation` | Mapped to `io.quarkiverse.jms.JmsListener` : destination, selector, concurrency, and subscription are all supported
+| `@JmsListeners` | `org.springframework.jms.annotation` | Repeatable container : each listener is mapped individually
 | `@SendTo` | `org.springframework.messaging.handler.annotation` | Mapped to `io.quarkiverse.jms.SendTo`
 | `@Header` | `org.springframework.messaging.handler.annotation` | Mapped to `io.quarkiverse.jms.JmsHeader`
 | `@Payload` | `org.springframework.messaging.handler.annotation` | Mapped to the first non-annotated parameter (implicit in Quarkus)
@@ -35,7 +35,7 @@ This brings in the Spring JMS API types and the Quarkus JMS runtime. You still n
 |===
 | Spring type | Quarkus equivalent
 
-| `org.springframework.jms.core.JmsClient` | Adapted via `SpringJmsClientAdapter` — inject with `@Inject`
+| `org.springframework.jms.core.JmsClient` | Adapted via `SpringJmsClientAdapter` : inject with `@Inject`
 | `org.springframework.jms.listener.adapter.JmsResponse` | Supported as a return type from `@JmsListener` methods for dynamic reply routing
 |===
 
@@ -121,8 +121,8 @@ The `SpringJmsClientAdapter` delegates to the Quarkus `JmsClient` under the hood
 
 == What's Different from Spring
 
-* CDI scope is required — annotate listener classes with `@ApplicationScoped` (or another CDI scope). The extension adds it automatically if missing, but being explicit is recommended.
+* CDI scope is required. Annotate your listener classes with `@ApplicationScoped` (or another CDI scope). The extension adds it automatically if missing, but being explicit is recommended.
 * `@Headers` (map injection of all headers) is supported.
-* `@Payload` is optional — the first non-annotated parameter is the payload by default.
+* `@Payload` is optional. The first non-annotated parameter is the payload by default.
 * Container factory configuration uses `application.properties` instead of Java `@Bean` definitions.
 * All Quarkus JMS features (session pooling, health checks, tracing, metrics, XA transactions) apply transparently to Spring-annotated listeners.

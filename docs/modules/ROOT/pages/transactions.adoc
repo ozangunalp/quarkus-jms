@@ -62,7 +62,7 @@ XA with the Reactive Messaging connector uses a **suspend/resume** mechanism:
 3. After processing, the transaction is suspended again
 4. The commit handler resumes and commits (or rollback handler resumes and rolls back)
 
-This works with `@Blocking`, `@NonBlocking`, and `@RunOnVirtualThread` — the transaction follows the message via metadata, not thread-local state.
+This works with `@Blocking`, `@NonBlocking`, and `@RunOnVirtualThread`. The transaction follows the message via metadata, not thread-local state.
 
 == JmsClient with XA
 
@@ -70,7 +70,7 @@ Operations on `JmsQueue`, `JmsTopic` and `JmsClient` participate in the caller's
 When one of them is called inside an active transaction, for example in a `@Transactional` method, the extension creates an XA context, enlists it in the transaction, and closes it when the transaction completes.
 This applies to sends, receives, `receiveWith` and `execute`.
 
-A message sent inside a transaction is only delivered when the transaction commits:
+When you send a message inside a transaction, it is only delivered when the transaction commits:
 
 [source,java]
 ----
@@ -97,10 +97,10 @@ void processBatch() {
 
 === Without an XA connection factory
 
-If a transaction is active but no XA-capable connection factory is available, the operation uses a local transacted JMS session instead.
+If a transaction is active but no XA-capable connection factory is available, your operations use a local transacted JMS session instead.
 The session is committed after the transaction commits, and rolled back if the transaction rolls back.
 
-This is not atomic: if the JMS commit fails after the database commit, the database changes are kept but the JMS operation is lost.
+This is not atomic: if the JMS commit fails after the database commit, your database changes are kept but the JMS operation is lost.
 Use an XA connection factory when both must succeed or fail together.
 
 == XA with Virtual Threads

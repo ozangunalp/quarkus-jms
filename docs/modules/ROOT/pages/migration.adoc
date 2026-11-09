@@ -109,7 +109,7 @@ orders.send(ctx -> {
 ----
 
 NOTE: Messages sent with a typed destination carry the payload type in the `_type` message property (configurable with `quarkus.jms.converter.type-id-property`).
-Consumers that are not built with Quarkus JMS can ignore this property.
+If your consumers are not built with Quarkus JMS, they can ignore this property.
 
 === Receiving messages synchronously
 
@@ -177,7 +177,7 @@ public class OrderConsumer implements Runnable {
 }
 ----
 
-With Quarkus JMS, the startup and shutdown observers, the executor and the loop are replaced by an annotated method:
+With Quarkus JMS, you can replace the startup and shutdown observers, the executor and the loop with an annotated method:
 
 [source,java]
 ----
@@ -255,10 +255,10 @@ See xref:transactions.adoc[XA Distributed Transactions] for the Reactive Messagi
 
 If you keep `quarkus-pooled-jms`, you have two options for XA:
 
-* **Keep `quarkus.pooled-jms.transaction=xa`** — the pool manages XA enlistment automatically.
+* **Keep `quarkus.pooled-jms.transaction=xa`** : the pool manages XA enlistment automatically.
   Use `@Transactional` methods with `connectionFactory.createContext(Session.SESSION_TRANSACTED)` as before.
   This approach works but does not integrate with `@JmsListener(acknowledge = XA)` or `JmsClient` XA support.
-* **Use Quarkus JMS XA** — set `quarkus.pooled-jms.transaction=disabled` so the pool handles connection/session pooling only.
+* **Use Quarkus JMS XA** : set `quarkus.pooled-jms.transaction=disabled` so the pool handles connection/session pooling only.
   Quarkus JMS manages XA enlistment directly through the `XAConnectionFactory`, which is incompatible with the `quarkus-pooled-jms` XA model.
   This lets you use `@JmsListener(acknowledge = XA)` and `JmsClient` inside `@Transactional` methods.
 
