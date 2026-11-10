@@ -72,7 +72,8 @@ When you produce the `ConnectionFactory` yourself with a plain JMS client librar
 When no Quarkus extension provides the `ConnectionFactory`, produce it as a CDI bean.
 Quarkus JMS uses the `@Default` bean, or a bean qualified with `@Identifier` when a destination or listener sets `connection-factory` / `connectionFactory`.
 
-In the examples below, the configuration keys (`activemq.url`, `ibmmq.host`, ...) are defined by the application, not by Quarkus JMS.
+In the examples below, the application defines the configuration keys (`activemq.url`, `ibmmq.host`, ...).
+They are not managed by Quarkus JMS.
 
 TLS and credentials are configured on the `ConnectionFactory`: through the provider extension's configuration, or in your producer method.
 A producer method can inject the Quarkus `TlsConfigurationRegistry` or a `CredentialsProvider` like any other CDI bean.
@@ -337,7 +338,7 @@ public class RabbitMqConnectionFactoryProducer {
 }
 ----
 
-RabbitMQ does not prefetch messages for JMS consumers by default, so consumer caching (`quarkus.jms.pool.cache-consumers=true`) can be enabled safely.
+RabbitMQ does not prefetch messages for JMS consumers by default, so you can safely enable consumer caching (`quarkus.jms.pool.cache-consumers=true`).
 
 == Amazon SQS
 

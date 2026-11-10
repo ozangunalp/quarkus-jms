@@ -36,7 +36,7 @@ public class OrderProcessor {
 }
 ----
 
-If `destination` is omitted, the channel name is used as the destination name.
+If you omit `destination`, the extension uses your channel name as the destination name.
 
 == Outgoing Channels
 
@@ -103,7 +103,7 @@ mp.messaging.incoming.orders.transaction-mode=xa      # XA distributed transacti
 ----
 
 With `local`, the JMS session is committed after successful processing and rolled back on failure.
-With `xa`, the message consumption participates in a distributed XA transaction — see xref:transactions.adoc[XA Distributed Transactions].
+With `xa`, the message consumption participates in a distributed XA transaction. See xref:transactions.adoc[XA Distributed Transactions].
 
 == Failure Strategies
 
@@ -118,7 +118,7 @@ For transactional modes, the failure handler composes: rollback first, then dele
 
 == Retry
 
-Terminal errors can be retried automatically:
+The extension can automatically retry your terminal errors:
 
 [source,properties]
 ----
